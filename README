@@ -1,0 +1,26 @@
+
+                    _|_|_|    _|_|    _|      _|  _|      _|  
+                  _|        _|    _|  _|_|  _|_|  _|_|  _|_|  
+                  _|        _|    _|  _|  _|  _|  _|  _|  _|  
+                  _|        _|    _|  _|      _|  _|      _|  
+                   \_|_|_|    _|_|    _|      _|  _|      _| 
+
+                      The Threadless Communication System
+                          Preventing bugs since 2013
+								
+                 Don't drink and drive, Don't thread and code!
+
+
+COMM is a generic network communication library. You can add it to your
+program to communicate easily across networks, with multiple clients,
+in a server-client architecture. It is primarily threadless because
+experience has shown threads are better avoided when at all possible when
+stable code is required. When you have threads in your code, you MUST make
+sure that you have a plan in place for how the threads will avoid deadlocks
+and race conditions. The easiest way to avoid those problems is to not use
+threads at all.
+
+To accomplish this, COMM provides the function COMM_run() which will check
+any operations that need to be done, and then return. This function should be
+called frequently.
+
