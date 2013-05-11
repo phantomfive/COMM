@@ -1,8 +1,15 @@
 #ifndef COMMCLIENT_H
 #define COMMCLIENT_H
 
+#include "notrap.h"
+
 typedef struct COMM_struct COMM_client;
 typedef int COMM_CLIENT_STATUS;
+
+//--------------------------------------------------------------------------
+// Callbacks for receiving messages.
+// Use these to receive messages, and send a response.
+//--------------------------------------------------------------------------
 
 BOOL (*COMM_message_received_cb)(int code, const char *param1, 
                                            const char *param2,
@@ -26,15 +33,18 @@ BOOL (*COMM_binary_message_received_cb)(int code, const char *param1,
 
 
 
-COMM_client *COMM_init(COMM_message_received_cb *messageReceivedCallback,
-                COMM_binary_message_received_cb *bMessageReceivedCallback,
-					 void *context);
+//-------------------------------------------------------------------------
+// Callbacks for starting, connecting, and disconnecting a COMM client.
+//-------------------------------------------------------------------------
+COMM_client *COMM_initClient(COMM_message_received_cb *messageReceivedCallback,
+                     COMM_binary_message_received_cb *bMessageReceivedCallback,
+                     void *context);
 
 void COMM_connect(const char *serverName, uint16_t serverPort);
 
 void COMM_disconnect(COMM_client **obj);
 
-COMM_CLIENT_STATUS COMM_runLoop(COMM_client *obj);
+COMM_CLIENT_STATUS COMM_runClientLoop(COMM_client *obj);
 
 #endif
 
