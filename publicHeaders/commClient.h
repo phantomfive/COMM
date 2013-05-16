@@ -1,7 +1,7 @@
 #ifndef COMMCLIENT_H
 #define COMMCLIENT_H
 
-#include "notrap.h"
+#include "commErrors.h"
 
 typedef struct COMM_struct COMM_client;
 typedef int COMM_CLIENT_STATUS;

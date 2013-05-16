@@ -1,6 +1,6 @@
 #ifndef COMM_SERVER_H
 
-#include "notrap.h"
+#include "commErrors.h"
 
 typedef struct COMM_server_struct COMM_server;
 typedef struct COMM_connection_struct COMM_connection;
