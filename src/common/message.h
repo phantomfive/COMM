@@ -9,6 +9,9 @@
  * Copyright Andrew 2013 Usable under the terms of the GPL 3.0 or greater.
  */
 
+//-------------------------------------------------------------------------
+// Section for data structures
+//-------------------------------------------------------------------------
 
 /* The base class */
 struct Message {
@@ -19,11 +22,11 @@ struct Message {
 	// we want to be specific in the exact size of the field */
 	uint32_t type;
 
-//Available types.
-#define TYPE_BINARY 0x1
-#define TYPE_STRING 0x2
 };
 
+//Available types. These correspond to the message structs, defined below
+#define TYPE_BINARY 0x1
+#define TYPE_STRING 0x2
 
 //Avaliable usages. For the 'usage' field in messages.
 //The initial use for this is to distinguish messages for internal use
@@ -66,6 +69,11 @@ struct BinaryMessage {
 	//used locally, not sent to the other side
 	void *context;
 };
+
+
+//------------------------------------------------------------------------
+// Section for Methods
+//------------------------------------------------------------------------
 
 void freeMessage(Message **msg);
 
