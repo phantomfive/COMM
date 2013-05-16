@@ -4,6 +4,7 @@
 
 typedef struct COMM_server_struct COMM_server;
 typedef struct COMM_connection_struct COMM_connection;
+typedef enum   COMM_ServerStatus_enum COMM_ServerStatus;
 
 
 //----------------------------------------------------------------------------
@@ -46,7 +47,12 @@ COMM_server *COMM_initServer(COMM_connectionStatusCallback   *css_cb,
 
 int COMM_beginListening(int port);
 
-int COMM_runServerLoop(COMM_server *obj);
+
+COMM_ServerStatus COMM_runServerLoop(COMM_server *obj);
+
+enum COMM_ServerStatus_enum {
+	COMM_HAPPY
+};
 
 int COMM_shutdownServer(COMM_server **obj);
 
