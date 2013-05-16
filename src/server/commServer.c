@@ -60,55 +60,11 @@ void COMM_shutdownServer(COMM_server **obj) {
 //----------------------------------------------------------------------------
 // Functions for sending messages
 //----------------------------------------------------------------------------
-
-struct Message {
-	uint8_t type;
-};
-
-struct StringMessage {
-	struct Message header;
-	uint8_t internalCategory;
-	COMM_connection *client;
-	void *context;
-	int32_t code;
-	int32_t param1Size;
-	int32_t param2Size;
-	int32_t param3Size;
-	int32_t param4Size;
-	char *params;
-};
-
-struct BinaryMessage {
-	struct Message header;
-	uint8_t internalCategory;
-	COMM_connection *client;
-	void *context;
-	int32_t code;
-	int32_t param1Size;
-	int binarySize;
-	char *params;
-};
-
 int COMM_sendMessage(COMM_connection*client, int32_t code,
                      const char *param1,
                      const char *param2,
                      const char *param3,
                      const char *param4, void *context) {
-	struct StringMessage *msg;
-	
-	msg->internalCategory = CATEGORY_CLIENT;
-	msg->header.type = STRING_MESSAGE;
-	msg->client = client;
-	msg->code = code;
-	msg->context = context;
-	msg->param1Size = strlen(param1);
-	msg->param2Size = strlen(param2);
-	msg->param3Size = strlen(param3);
-	msg->param4Size = strlen(param4);
-	
-	msg->params = (char*)NTPmalloc(msg->param1Size + msg->param2Size + 
-	                               msg->param3Size + msg->param4Size);
-	if(msg->params==NULL) return COMM_NO_MEMORY;
 }
 
 int COMM_sendBinaryMessage(COMM_connection*client, int32_t code,
@@ -116,14 +72,6 @@ int COMM_sendBinaryMessage(COMM_connection*client, int32_t code,
                            const char *binaryPayload,
                            int binarySize,
                            void *context) {
-
-	struct BinaryMessage *msg;
-	
-	msg->header.type = BINARY_MESSAGE;
-	msg->internalCategory = CATEGORY_CLIENT;
-	msg->code = code;
-	msg->param1Size = NTPstrlen(param1);
-	
 }
 
 
