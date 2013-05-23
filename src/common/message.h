@@ -37,7 +37,9 @@ struct Message {
 
 /* StringMessage, inherits from Message */
 struct StringMessage {
-	
+	//used locally, not sent to the other side
+	const void *context;
+
 	//Fields that get sent across the wire
 	uint32_t type;                //same as parent class
 	uint32_t usage;               //one of the USAGE_* constants
@@ -47,15 +49,17 @@ struct StringMessage {
 	uint32_t param2Size;
 	uint32_t param3Size;
 	uint32_t param4Size;
-	uint8_t  *params;
-
-	//used locally, not sent to the other side
-	void *context;
+	uint32_t errMsgSize;
+	uint8_t  isError;
+	uint8_t  params[0];   //allocated at runtime to hold all the params
 };
 
 
 /* BinaryMessage, inherits from Message */
 struct BinaryMessage {
+
+	//used locally, not sent to the other side
+	const void *context;
 	
 	//Fields that get sent across the wire
 	uint32_t type;                //same as parent class
@@ -64,10 +68,9 @@ struct BinaryMessage {
 	uint32_t code;                //This and the rest are all passed to the user
 	uint32_t stringParamSize;
 	uint32_t binaryParamSize;
-	uint8_t  *params;
-
-	//used locally, not sent to the other side
-	void *context;
+	uint32_t errMsgSize;
+	uint8_t  isError;
+	uint8_t  params[0];  //allocated at runtime to hold all the params
 };
 
 
@@ -75,28 +78,38 @@ struct BinaryMessage {
 // Section for Methods
 //------------------------------------------------------------------------
 
-void freeMessage(Message **msg);
+void COMMFreeMessage(Message **msg);
 
-struct StringMessage *newStringMessage(uint32_t type,
-                                       uint32_t usage,
-                                       uint32_t correlationId,
-                                       uint32_t code,
-                                       const char *param1,
-                                       const char *param2,
-                                       const char *param3,
-                                       const char *param4,
-                                       void *context);
+/*If errMsg is not NULL, isError will be set to true. Returns NULL
+ *if there's not enough memory.*/
+struct StringMessage *COMMNewStringMessage(uint32_t type,
+                                           uint32_t usage,
+                                           uint32_t correlationId,
+                                           uint32_t code,
+                                           const char *param1,
+                                           const char *param2,
+                                           const char *param3,
+                                           const char *param4,
+                                           const char *errMsg,
+                                           void *context);
 
-struct BinaryMessage *newBinaryMessage(uint32_t type, 
-                                       uint32_t usage, 
-                                       uint32_t correlationId,
-                                       uint32_t code,
-                                       const char *stringParam,
-                                       uint32_t binaryParamSize,
-                                       uint8_t  *binaryParam
-                                       void *context);
+/*Same comment as above*/
+struct BinaryMessage *COMMNewBinaryMessage(uint32_t type, 
+                                           uint32_t usage, 
+                                           uint32_t correlationId,
+                                           uint32_t code,
+                                           const char *stringParam,
+                                           uint32_t binaryParamSize,
+                                           uint8_t  *binaryParam,
+														 const char *errMsg,
+                                           void *context);
 
-
+/*These are convenience methods for getting fields from the struct,
+ *since they stored in a format optimized for sending over the wire.
+ *The first one works on binary messages too, set index to 1. */
+const char *COMMgetStringParam(const struct Message*msg, int index);
+const char *COMMgetBinaryParam(const struct BinaryMessage*msg);
+const char *COMMgetErrMessage(const struct Message *msg);
 
 
 #endif
