@@ -1,9 +1,11 @@
-#include <stdlib.h>
-#include <string.h>
+#include "notrap.h"
 
 #include "message.h"
 
 /* message.c
+ * This code requires good understanding of common binary strategies
+ * in C, especially pointer arithmetic, and malloc() with a size larger
+ * than the structure requires.
  * Copyright Andrew 2013 Usable under the terms of the GPL 3.0 or greater.
  */
 
@@ -17,8 +19,7 @@ void COMMFreeMessage(Message **msg) {
 	*msg = NULL;
 }
 
-struct StringMessage *COMMNewStringMessage(uint32_t type,
-                                           uint32_t usage,
+struct StringMessage *COMMNewStringMessage(uint32_t usage,
                                            uint32_t correlationId,
                                            uint32_t code,
                                            const char *param1,
@@ -29,14 +30,14 @@ struct StringMessage *COMMNewStringMessage(uint32_t type,
                                            void *context) {
 	struct StringMessage *rv;
 	int allSize;
-	int size1 = strlen(param1);
-	int size2 = strlen(param2);
-	int size3 = strlen(param3);
-	int size4 = strlen(param4);
-	int errMsgSize = 0;
+	int size1 = NTPstrlen(param1) + 1;  //plus 1 because we send NULL chars
+	int size2 = NTPstrlen(param2) + 1;
+	int size3 = NTPstrlen(param3) + 1;
+	int size4 = NTPstrlen(param4) + 1;
+	int errMsgSize = 1;
 	BOOL err = FALSE;
 	if(errMsg!=NULL) {
-		errMsgSize = strlen(errMsg);
+		errMsgSize = NTPstrlen(errMsg) + 1;
 		err = TRUE;
 	}
 	else {
@@ -45,11 +46,11 @@ struct StringMessage *COMMNewStringMessage(uint32_t type,
 
 	//add size for all the parameters plus null characters
 	allSize = size1 + size2 + size3 + size4 + errMsgSize + 5;
-	rv = (struct StringMessage*)malloc(sizeof(struct StringMessage) + allSize); 
+	rv=(struct StringMessage*)NTPmalloc(sizeof(struct StringMessage) + allSize); 
 	if(rv==NULL) return NULL;
 
 	rv->context       = context;
-	rv->type          = type;
+	rv->type          = TYPE_STRING;
 	rv->usage         = usage;
 	rv->correlationId = correlationId;
 	rv->code          = code;
@@ -60,16 +61,15 @@ struct StringMessage *COMMNewStringMessage(uint32_t type,
 	rv->errMsgSize    = errMsgSize;
 	rv->isError       = err;
 	strcpy(rv->params, param1);
-	strcpy(rv->params + size1 + 1, param2);
-	strcpy(rv->params + size1 + size2 + 2, param3);
-	strcpy(rv->params + size1 + size2 + size3 + 3, params4);
-	strcpy(rv->params + size1 + size2 + size3 + 4, errMsg);
+	strcpy(rv->params + size1, param2);
+	strcpy(rv->params + size1 + size2, param3);
+	strcpy(rv->params + size1 + size2 + size3, params4);
+	strcpy(rv->params + size1 + size2 + size3 + size4, errMsg);
 
 	return rv;
 }
 
-struct BinaryMessage *COMMNewBinaryMessage(uint32_t type, 
-                                           uint32_t usage, 
+struct BinaryMessage *COMMNewBinaryMessage(uint32_t usage, 
                                            uint32_t correlationId,
                                            uint32_t code,
                                            const char *stringParam,
@@ -77,33 +77,78 @@ struct BinaryMessage *COMMNewBinaryMessage(uint32_t type,
                                            uint8_t  *binaryParam
                                            const char *errMsg,
                                            void *context) {
-	int stringSize = strlen(stringParam);
-	int errMsgSize = 0;
+	struct BinaryMessage *rv;
+	int stringSize = strlen(stringParam) + 1;
+	int errMsgSize = 1;
 	int allSize;
 	BOOL err = FALSE;
 	if(errMsg!=NULL) {
 		err = TRUE;
-		errMsgSize = strlen(errMsg);
+		errMsgSize = strlen(errMsg) + 1; //+1 because we send NULL across
 	}
 	else {
 		errMsg = "";
 	}
 
 	//add size for all the parameters plus null characters
-	allSize = stringSize + errMsgSize + binaryParamSize + 2;
+	allSize = stringSize + errMsgSize + binaryParamSize;
+	rv = (struct BinaryMessage*)NTPmalloc(sizeof(struct BinaryMessage)+allSize);
+	if(rv==NULL) return NULL;
 	
+	rv->type            = TYPE_BINARY;
+	rv->context         = context;
+	rv->usage           = usage;
+	rv->correlationId   = correlationId;
+	rv->code            = code;
+	rv->stringParamSize = stringSize; 
+	rv->binaryParamSize = binaryParamSize;
+	rv->errMsgSize      = errMsgSize;
+	rv->isError         = err;
+	strcpy(rv->params, stringParam);
+	strcpy(rv->params + stringSize, errMsg);
+	memcpy(rv->params + stringsSize + errMsgSize, binaryParam, binaryParamSize);
+
+	return rv;
 }
 
 const char *COMMgetStringParam(const struct Message*msg, int index) {
+	if(msg->type == TYPE_BINARY) {
+		struct BinaryMessage *bMsg = (struct BinaryMessage*)msg;
+		if(index!=1) return NULL;
+		return bMsg->params;
+	}
+	
+	if(msg->type == TYPE_STRING) {
+		struct StringMessage *sMsg = (struct StringMessage*)msg;
+		const char *rv = sMsg->params;
+		switch(index) {
+			case 4: rv += sMsg->param3Size;
+			case 3: rv += sMsg->param2Size;
+			case 2: rv += sMsg->param1Size;
+			case 1: return rv;
+		}
+	}
 
+	return NULL;
 }
 
 const char *COMMgetBinaryParam(const struct BinaryMessage*msg) {
-
+	return msg->params + msg->stringParamSize + msg->errMsgSize;
 }
 
 const char *COMMgetErrMessage(const struct Message *msg) {
+	if(msg->type == TYPE_BINARY) {
+		struct BinaryMessage *bMsg = (struct BinaryMessage *)msg;
+		return bMsg->params + stringParamSize;
+	}
+	
+	if(msg->type==TYPE_STRING) {
+		struct StringMessage *m = (struct StringMessage *)msg;
+		return m->params + m->param1Size + m->param2Size + 
+		                   m->param3Size + m->param4Size;
+	}
 
+	return NULL;
 }
 
 

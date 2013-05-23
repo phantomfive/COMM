@@ -44,7 +44,7 @@ struct StringMessage {
 	uint32_t type;                //same as parent class
 	uint32_t usage;               //one of the USAGE_* constants
 	uint32_t correlationId;       //The message and its response share this id
-	uint32_t code;                //This and the rest are all passed to the user
+	uint32_t code;                //This and the rest are all set by the user
 	uint32_t param1Size;
 	uint32_t param2Size;
 	uint32_t param3Size;
@@ -65,7 +65,7 @@ struct BinaryMessage {
 	uint32_t type;                //same as parent class
 	uint32_t usage;               //one of the USAGE_* constants
 	uint32_t correlationId;       //The message and its response share this id
-	uint32_t code;                //This and the rest are all passed to the user
+	uint32_t code;                //This and the rest are all set by the user
 	uint32_t stringParamSize;
 	uint32_t binaryParamSize;
 	uint32_t errMsgSize;
@@ -106,7 +106,8 @@ struct BinaryMessage *COMMNewBinaryMessage(uint32_t type,
 
 /*These are convenience methods for getting fields from the struct,
  *since they stored in a format optimized for sending over the wire.
- *The first one works on binary messages too, set index to 1. */
+ *The first one works on binary messages too, set index to 1.
+ *Return NULL on error.*/
 const char *COMMgetStringParam(const struct Message*msg, int index);
 const char *COMMgetBinaryParam(const struct BinaryMessage*msg);
 const char *COMMgetErrMessage(const struct Message *msg);
