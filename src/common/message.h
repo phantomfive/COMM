@@ -82,8 +82,7 @@ void COMMFreeMessage(Message **msg);
 
 /*If errMsg is not NULL, isError will be set to true. Returns NULL
  *if there's not enough memory.*/
-struct StringMessage *COMMNewStringMessage(uint32_t type,
-                                           uint32_t usage,
+struct StringMessage *COMMNewStringMessage(uint32_t usage,
                                            uint32_t correlationId,
                                            uint32_t code,
                                            const char *param1,
@@ -94,8 +93,7 @@ struct StringMessage *COMMNewStringMessage(uint32_t type,
                                            void *context);
 
 /*Same comment as above*/
-struct BinaryMessage *COMMNewBinaryMessage(uint32_t type, 
-                                           uint32_t usage, 
+struct BinaryMessage *COMMNewBinaryMessage(uint32_t usage, 
                                            uint32_t correlationId,
                                            uint32_t code,
                                            const char *stringParam,

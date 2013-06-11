@@ -1,0 +1,10 @@
+This directory is used for testing COMM.
+To test COMM, type:
+
+'make run'
+
+Which should build and run everything.
+
+Thanks to Asim Jalis for making cuTest the smallest test framework,
+which I used for testing.
+

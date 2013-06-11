@@ -1,2 +1,5 @@
 *.swp
+*.dysym
+test/commTests
+.DS_Store
 
