@@ -1,10 +1,10 @@
 CC = gcc
 
-CFLAGS = -IcuTest -ggdb -O1 -Wall -Werror
+CFLAGS = -IcuTest -I../../notrap/publicHeaders -ggdb -O1 -Wall -Werror
 LDFLAGS = 
 
-CSRC = $(wildcard *.c) cuTest/CuTest.c
-HDRS = $(wildcard *.h) cuTest/CuTest.h
+CSRC = $(wildcard *.c) cuTest/CuTest.c $(wildcard ../src/common/*.c)
+HDRS = $(wildcard *.h) cuTest/CuTest.h $(wildcard ../src/common/*.h)
 
 run: commTests
 	./commTests

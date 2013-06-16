@@ -13,7 +13,7 @@
 // Public API
 //------------------------------------------------------------------------
 
-void COMMFreeMessage(Message **msg) {
+void COMMFreeMessage(struct Message **msg) {
 	if(msg==NULL || *msg==NULL) return;
 	free(*msg);
 	*msg = NULL;
@@ -60,11 +60,11 @@ struct StringMessage *COMMNewStringMessage(uint32_t usage,
 	rv->param4Size    = size4;
 	rv->errMsgSize    = errMsgSize;
 	rv->isError       = err;
-	strcpy(rv->params, param1);
-	strcpy(rv->params + size1, param2);
-	strcpy(rv->params + size1 + size2, param3);
-	strcpy(rv->params + size1 + size2 + size3, params4);
-	strcpy(rv->params + size1 + size2 + size3 + size4, errMsg);
+	NTPstrcpy((char*)rv->params, param1);
+	NTPstrcpy((char*)rv->params + size1, param2);
+	NTPstrcpy((char*)rv->params + size1 + size2, param3);
+	NTPstrcpy((char*)rv->params + size1 + size2 + size3, param4);
+	NTPstrcpy((char*)rv->params + size1 + size2 + size3 + size4, errMsg);
 
 	return rv;
 }
@@ -74,7 +74,7 @@ struct BinaryMessage *COMMNewBinaryMessage(uint32_t usage,
                                            uint32_t code,
                                            const char *stringParam,
                                            uint32_t binaryParamSize,
-                                           uint8_t  *binaryParam
+                                           uint8_t  *binaryParam,
                                            const char *errMsg,
                                            void *context) {
 	struct BinaryMessage *rv;
@@ -84,7 +84,7 @@ struct BinaryMessage *COMMNewBinaryMessage(uint32_t usage,
 	BOOL err = FALSE;
 	if(errMsg!=NULL) {
 		err = TRUE;
-		errMsgSize = strlen(errMsg) + 1; //+1 because we send NULL across
+		errMsgSize = NTPstrlen(errMsg) + 1; //+1 because we send NULL across
 	}
 	else {
 		errMsg = "";
@@ -104,9 +104,9 @@ struct BinaryMessage *COMMNewBinaryMessage(uint32_t usage,
 	rv->binaryParamSize = binaryParamSize;
 	rv->errMsgSize      = errMsgSize;
 	rv->isError         = err;
-	strcpy(rv->params, stringParam);
-	strcpy(rv->params + stringSize, errMsg);
-	memcpy(rv->params + stringsSize + errMsgSize, binaryParam, binaryParamSize);
+	NTPstrcpy((char*)rv->params, stringParam);
+	NTPstrcpy((char*)rv->params + stringSize, errMsg);
+	NTPmemcpy((char*)rv->params + stringSize + errMsgSize,binaryParam,binaryParamSize);
 
 	return rv;
 }
@@ -115,12 +115,12 @@ const char *COMMgetStringParam(const struct Message*msg, int index) {
 	if(msg->type == TYPE_BINARY) {
 		struct BinaryMessage *bMsg = (struct BinaryMessage*)msg;
 		if(index!=1) return NULL;
-		return bMsg->params;
+		return (char*)bMsg->params;
 	}
 	
 	if(msg->type == TYPE_STRING) {
 		struct StringMessage *sMsg = (struct StringMessage*)msg;
-		const char *rv = sMsg->params;
+		const char *rv = (char*)sMsg->params;
 		switch(index) {
 			case 4: rv += sMsg->param3Size;
 			case 3: rv += sMsg->param2Size;
@@ -133,19 +133,19 @@ const char *COMMgetStringParam(const struct Message*msg, int index) {
 }
 
 const char *COMMgetBinaryParam(const struct BinaryMessage*msg) {
-	return msg->params + msg->stringParamSize + msg->errMsgSize;
+	return (char*)msg->params + msg->stringParamSize + msg->errMsgSize;
 }
 
 const char *COMMgetErrMessage(const struct Message *msg) {
 	if(msg->type == TYPE_BINARY) {
 		struct BinaryMessage *bMsg = (struct BinaryMessage *)msg;
-		return bMsg->params + stringParamSize;
+		return (char*)bMsg->params + bMsg->stringParamSize;
 	}
 	
 	if(msg->type==TYPE_STRING) {
 		struct StringMessage *m = (struct StringMessage *)msg;
-		return m->params + m->param1Size + m->param2Size + 
-		                   m->param3Size + m->param4Size;
+		return (char*)m->params + m->param1Size + m->param2Size + 
+		                          m->param3Size + m->param4Size;
 	}
 
 	return NULL;

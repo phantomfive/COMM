@@ -1,6 +1,8 @@
 #ifndef COMM_MESSAGE_H
 #define COMM_MESSAGE_H
 
+#include <notrap.h>
+
 /*
  * Class to deal with internal message types.
  * We have two types of messages currently, a string message and a 
@@ -24,7 +26,9 @@ struct Message {
 
 };
 
-//Available types. These correspond to the message structs, defined below
+//Available types. These correspond to the message structs, defined below.
+//This header is not available externally to clients, so it's ok to define
+//them with a simple name
 #define TYPE_BINARY 0x1
 #define TYPE_STRING 0x2
 
@@ -78,10 +82,14 @@ struct BinaryMessage {
 // Section for Methods
 //------------------------------------------------------------------------
 
-void COMMFreeMessage(Message **msg);
+/* Frees the message and sets it to NULL. If it's already NULL,
+ * returns harmlessly */
+void COMMFreeMessage(struct Message **msg);
 
-/*If errMsg is not NULL, isError will be set to true. Returns NULL
- *if there's not enough memory.*/
+/*Packs these fields into a struct Message for convenience.
+ *
+ If errMsg is not NULL, isError will be set to true. Returns NULL
+ *if there's not enough memory (or just crashes, depending on your OS).*/
 struct StringMessage *COMMNewStringMessage(uint32_t usage,
                                            uint32_t correlationId,
                                            uint32_t code,
@@ -105,6 +113,12 @@ struct BinaryMessage *COMMNewBinaryMessage(uint32_t usage,
 /*These are convenience methods for getting fields from the struct,
  *since they stored in a format optimized for sending over the wire.
  *The first one works on binary messages too, set index to 1.
+ *
+ *COMMgetStringParam() has the first index starting at 1.
+ *
+ * If the error is set to FALSE, COMMgetErrMessage will return a string
+ * of length 0.
+ *
  *Return NULL on error.*/
 const char *COMMgetStringParam(const struct Message*msg, int index);
 const char *COMMgetBinaryParam(const struct BinaryMessage*msg);
