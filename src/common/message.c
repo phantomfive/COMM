@@ -41,7 +41,8 @@ struct StringMessage *COMMNewStringMessage(uint32_t usage,
 		err = TRUE;
 	}
 	else {
-		err = TRUE;
+		errMsg = "";
+		err = FALSE;
 	}
 
 	//add size for all the parameters plus null characters
@@ -112,6 +113,7 @@ struct BinaryMessage *COMMNewBinaryMessage(uint32_t usage,
 }
 
 const char *COMMgetStringParam(const struct Message*msg, int index) {
+
 	if(msg->type == TYPE_BINARY) {
 		struct BinaryMessage *bMsg = (struct BinaryMessage*)msg;
 		if(index!=1) return NULL;

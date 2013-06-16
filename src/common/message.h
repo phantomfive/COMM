@@ -17,6 +17,8 @@
 
 /* The base class */
 struct Message {
+	void *context;
+
 	// Indicates whether the message is binary or a string message. 
    //
 	// It might seem natural to make 'type' an enum, however,
