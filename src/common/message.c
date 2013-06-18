@@ -55,16 +55,16 @@ struct Message *COMMNewStringMessage(uint32_t usage,
 	//copy the data to the newly allocated mem
 	rv->type = type;
 	rv->context = context;
-	NTPstrcpy((char*)rv->data + 41, param1);
-	NTPstrcpy((char*)rv->data + 41 + size1, param2);
-	NTPstrcpy((char*)rv->data + 41 + size1 + size2, param3);
-	NTPstrcpy((char*)rv->data + 41 + size1 + size2 + size3, param4);
+	NTPstrcpy((char*)rv->data + 41                                , param1);
+	NTPstrcpy((char*)rv->data + 41 + size1                        , param2);
+	NTPstrcpy((char*)rv->data + 41 + size1 + size2                , param3);
+	NTPstrcpy((char*)rv->data + 41 + size1 + size2 + size3        , param4);
 	NTPstrcpy((char*)rv->data + 41 + size1 + size2 + size3 + size4, errMsg);
 
 	//we store this stuff in network byte order
-	allSize = ntohl(allSize);
-	type    = ntohl(type);
-	usage   = ntohl(usage);
+	allSize       = ntohl(allSize);
+	type          = ntohl(type);
+	usage         = ntohl(usage);
 	correlationId = ntohl(correlationId);
 	code          = ntohl(code);
 	size1         = ntohl(size1);
@@ -112,7 +112,7 @@ struct Message *COMMNewBinaryMessage(uint32_t usage,
 
 	//add size for all the parameters plus null characters
 	allSize = stringSize + errMsgSize + binaryParamSize + 41;
-	rv = (struct Message*)NTPmalloc(allSize+sizeof(struct Message));    
+	rv = (struct Message*)NTPmalloc(sizeof(struct Message)+allSize);    
 	if(rv==NULL) return NULL;                    //It seems like there are magic
 	                                             //number all over the place,
 	                                             //but it has to be that way,
@@ -120,7 +120,7 @@ struct Message *COMMNewBinaryMessage(uint32_t usage,
 	                                             //terms of byte position
 	rv->type = type;
 	rv->context = context;
-	NTPstrcpy((char*)rv->data, stringParam + 41);
+	NTPstrcpy((char*)rv->data + 41,stringParam);
 	NTPmemcpy((char*)rv->data + stringSize + 41,binaryParam,binaryParamSize);
 	NTPstrcpy((char*)rv->data + stringSize + 41 + binaryParamSize, errMsg);
 
@@ -139,7 +139,7 @@ struct Message *COMMNewBinaryMessage(uint32_t usage,
 	NTPmemcpy(rv->data + 12, &correlationId  , 4);
 	NTPmemcpy(rv->data + 16, &code           , 4);
 	NTPmemcpy(rv->data + 20, &stringSize     , 4);
-	NTPmemcpy(rv->data + 20, &binaryParamSize, 4);
+	NTPmemcpy(rv->data + 24, &binaryParamSize, 4);
 	NTPmemcpy(rv->data + 36, &errMsgSize     , 4);
 	NTPmemcpy(rv->data + 40, &err            , 1);
 

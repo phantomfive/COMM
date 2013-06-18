@@ -67,6 +67,8 @@ void testCreateBinaryMessage(CuTest *tc) {
 	char *   errMsg = NULL;
 	BOOL err;
 	void *context = (void*)1234;
+
+	//Create a message and check that we can retrieve all the parameters correctly
 	struct Message *msg = COMMNewBinaryMessage(usage, correlationId,
 	                       code, stringParam, binaryParamSize, (uint8_t*)binaryParam,
 	                       errMsg, context);
@@ -75,7 +77,7 @@ void testCreateBinaryMessage(CuTest *tc) {
 	CuAssert(tc, "check type2", COMMgetType(msg, &out) && out==TYPE_BINARY);
 	CuAssert(tc, "check usage", COMMgetUsage(msg, &out) && usage == out);
 	CuAssert(tc, "check corr ID", COMMgetCorrelationId(msg, &out) && out==correlationId);
-	CuAssert(tc, "check str",NTPstrcmp(stringParam, COMMgetStringParam((struct Message*)msg,1))==0);
+	CuAssert(tc, "check str",NTPstrcmp(stringParam, COMMgetStringParam(msg,1))==0);
 	CuAssert(tc, "check bin", NTPstrcmp(binaryParam, (char*)COMMgetBinaryParam(msg, &out))==0);
 	CuAssert(tc, "check bin size", binaryParamSize == out);
 	CuAssert(tc, "check err", COMMgetIsErr(msg, &err) && !err);
@@ -93,10 +95,10 @@ void testCreateBinaryMessage(CuTest *tc) {
 	CuAssert(tc, "check type2", COMMgetType(msg, &out) && out==TYPE_BINARY);
 	CuAssert(tc, "check usage", COMMgetUsage(msg, &out) && usage==out);
 	CuAssert(tc, "check corr ID", COMMgetCorrelationId(msg, &out) && out==correlationId);
-	CuAssert(tc, "check str",NTPstrcmp(stringParam, COMMgetStringParam((struct Message*)msg,1))==0);
+	CuAssert(tc, "check str",NTPstrcmp(stringParam, COMMgetStringParam(msg,1))==0);
 	CuAssert(tc, "check bin", NTPstrcmp(binaryParam, (char*)COMMgetBinaryParam(msg, &out))==0);
 	CuAssert(tc, "check bin size", binaryParamSize == out);
-	CuAssert(tc, "check err", COMMgetIsErr(msg, &err) && !err);
+	CuAssert(tc, "check err", COMMgetIsErr(msg, &err) && err==TRUE);
 	CuAssert(tc, "check err str",NTPstrcmp(errMsg,COMMgetErrMessage((struct Message*)msg))==0);
 	CuAssert(tc, "check context", msg->context==context);
 	COMMFreeMessage((struct Message**)&msg);
