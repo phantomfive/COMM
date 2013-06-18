@@ -5,7 +5,8 @@
 
 /*
  * Class to deal with internal message types.
- * We have two types of messages currently, a string and binary message.
+ * We have two types of messages currently, 
+ * a string and binary message.
  * 
  * Copyright Andrew 2013 Usable under the terms of the GPL 3.0 or greater.
  */
@@ -142,7 +143,7 @@ struct Message {
  * returns harmlessly */
 void COMMFreeMessage(struct Message **msg);
 
-/*Packs these fields into a struct Message for convenience.
+/*Packs these fields into a struct Message for sending across a wire.
  *
  If errMsg is not NULL, isError will be set to true. Returns NULL
  *if there's not enough memory (or just crashes, depending on your OS).*/

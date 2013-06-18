@@ -1,4 +1,3 @@
-#include "notrap.h"
 
 #include "message.h"
 
@@ -6,6 +5,8 @@
  * This code requires good understanding of common binary strategies
  * in C, especially pointer arithmetic, and malloc() with a size larger
  * than the structure requires.
+ * For method descriptions, see the header.
+ *
  * Copyright Andrew 2013 Usable under the terms of the GPL 3.0 or greater.
  */
 
@@ -112,11 +113,11 @@ struct BinaryMessage *COMMNewBinaryMessage(uint32_t usage,
 	//add size for all the parameters plus null characters
 	allSize = stringSize + errMsgSize + binaryParamSize + 41;
 	rv = (struct Message*)NTPmalloc(allSize+sizeof(struct Message));    
-	if(rv==NULL) return NULL;                         //It seems like there are magic
-	                                                   //number all over the place,
-	                                                   //but it has to be that way,
-	                                                   //the protocol is defined in
-	                                                   //terms of byte position
+	if(rv==NULL) return NULL;                    //It seems like there are magic
+	                                             //number all over the place,
+	                                             //but it has to be that way,
+	                                             //the protocol is defined in
+	                                             //terms of byte position
 	msg->type = type;
 	msg->context = context;
 	NTPstrcpy((char*)rv->data, stringParam + 41);
@@ -171,7 +172,8 @@ const BOOL getCode(const struct Message *msg, uint32_t *codeOut) {
 	return TRUE;
 }
 
-//Some of these methods are for internal use, but may eventually be used externally
+//Some of these methods are for internal use, 
+//but may eventually be used externally
 static BOOL getBinarySize(const struct Message *msg, uint32_t *sizeOut) {
 	NTPmemcpy(codeOut, msg->data + 24, 4);
 	*codeOut = ntohl(*codeOut);
@@ -179,7 +181,8 @@ static BOOL getBinarySize(const struct Message *msg, uint32_t *sizeOut) {
 }
 
 //index starts with 1
-static BOOL getStringParamSize(const struct Message *msg, int index,uint32_t*sizeOut){
+static BOOL getStringParamSize(const struct Message *msg, int index,
+                               uint32_t*sizeOut){
 	NTPmemcpy(sizeOut, msg->data + 20 + ((index-1)*4), 4);
 	*sizeOut = ntohl(*sizeOut);
 	return TRUE;
@@ -213,7 +216,8 @@ const char *COMMgetStringParam(const struct Message*msg, int index) {
 	return NULL;  //can't happen
 }
 
-const uint8_t*COMMgetBinaryParam(const struct BinaryMessage*msg, uint32_t*sizeOut) {
+const uint8_t*COMMgetBinaryParam(const struct BinaryMessage*msg, 
+                                 uint32_t*sizeOut) {
 	int stringSize;
 	if(!getStringParamSize(msg, 1, &stringSize) ||
 	   !getBinarySize(msg, sizeOut))      return NULL;
@@ -235,7 +239,10 @@ const char *COMMgetErrMessage(const struct Message *msg) {
 			!getStringParamSize(msg, 3, &param3Size)   ||
 			!getStringParamSize(msg, 4, &param4Size)) return NULL;
 
-		return(char*)msg->data + 41 + param1Size + param2Size + param3Size + param4Size;
+		return(char*)msg->data + 41 + param1Size + 
+		                              param2Size + 
+		                              param3Size + 
+		                              param4Size;
 	}
 
 	return NULL; //shouldn't happen
