@@ -14,20 +14,6 @@
 //-------------------------------------------------------------------------
 // Section for data structures
 //-------------------------------------------------------------------------
-
-/* The base class */
-struct Message {
-	void *context;
-
-	// Indicates whether the message is binary or a string message. 
-   //
-	// It might seem natural to make 'type' an enum, however,
-	// we need to be able to send this over the wire, so
-	// we want to be specific in the exact size of the field */
-	uint32_t type;
-
-};
-
 //Available types. These correspond to the message structs, defined below.
 //This header is not available externally to clients, so it's ok to define
 //them with a simple name
@@ -81,8 +67,8 @@ TYPE_STRING format
 |       |   |                                                 |   |
 |       |   +-------------------------------------------------+   |
 |       |   | String param 3                                  |   |
-|       |   | (can be length 1, if there is no string, but    |   |
-|       |   |  still needs a null byte)                       |   |
+|       |   | (can be length 0, if there is no string, but    |   |
+|       |   |  still needs a null byte, so really length 1)   |   |
 |       |   +-------------------------------------------------+   |
 |       |   | String param 4                                  |   |
 |       |   |                                                 |   |
@@ -93,7 +79,9 @@ TYPE_STRING format
 |       |   +-------------------------------------------------+   |
 +-------+---------------------------------------------------------+
 
-TYPE_BINARY format
+TYPE_BINARY format.
+Note that string messages and binary messages
+are identical until byte 24.
 
 +-------+---------------------------------------------------------+
 | bytes | description                                             |
@@ -105,9 +93,11 @@ TYPE_BINARY format
 | 16-19 | uint32_t code that is passed to the user                |
 | 20-23 | uint32_t size of the string parameter                   |
 | 24-27 | uint32_t size of the binary parameter                   |
-| 28-31 | uint32_t size of the error message                      |
-| 32    | uint8_t true on error, false if no error                |
-| 33-   |   +-------------------------------------------------+   | 
+| 28-31 | uint32_t unused                                         |
+| 32-35 | uint32_t unused                                         |
+| 36-39 | uint32_t size of the error message                      |
+| 40    | uint8_t true on error, false if no error                |
+| 41-   |   +-------------------------------------------------+   | 
 |       |   | String param                                    |   |
 |       |   |                                                 |   |
 |       |   |                                                 |   |
@@ -137,41 +127,11 @@ TYPE_BINARY format
 
 
 /* StringMessage, inherits from Message */
-struct StringMessage {
+struct Message {
 	//used locally, not sent to the other side
 	const void *context;
-
-	//Fields that get sent across the wire
-	/*uint32_t type;                //same as parent class
-	uint32_t usage;               //one of the USAGE_* constants
-	uint32_t correlationId;       //The message and its response share this id
-	uint32_t code;                //This and the rest are all set by the user
-	uint32_t param1Size;
-	uint32_t param2Size;
-	uint32_t param3Size;
-	uint32_t param4Size;
-	uint32_t errMsgSize;
-	uint8_t  isError;*/
-	uint8_t  params[0];   //allocated at runtime to hold all the params
-};
-
-
-/* BinaryMessage, inherits from Message */
-struct BinaryMessage {
-
-	//used locally, not sent to the other side
-	const void *context;
-	
-	//Fields that get sent across the wire
-	uint32_t type;                //same as parent class
-	uint32_t usage;               //one of the USAGE_* constants
-	uint32_t correlationId;       //The message and its response share this id
-	uint32_t code;                //This and the rest are all set by the user
-	uint32_t stringParamSize;
-	uint32_t binaryParamSize;
-	uint32_t errMsgSize;
-	uint8_t  isError;
-	uint8_t  params[0];  //allocated at runtime to hold all the params
+	uint32_t type;
+	uint8_t  data[0];   //allocated at runtime to hold all the params
 };
 
 
@@ -217,9 +177,17 @@ struct BinaryMessage *COMMNewBinaryMessage(uint32_t usage,
  * of length 0.
  *
  *Return NULL on error.*/
-const char *COMMgetStringParam(const struct Message*msg, int index);
-const char *COMMgetBinaryParam(const struct BinaryMessage*msg);
-const char *COMMgetErrMessage(const struct Message *msg);
+const char *COMMgetStringParam(const struct Message *msg, int index);
+const uint8_t*COMMgetBinaryParam(const struct Message *msg, uint32_t *sizeOut);
+const char *COMMgetErrMessage(const struct Message  *msg);
+
+/*These are similar, but return false if the message is the wrong type,
+ *and put the desired information into the 'out' parameter */ 
+const BOOL getSize(const struct Message *msg, uint32_t *sizeOut);
+const BOOL getType(const struct Message *msg, uint32_t *typeOut);
+const BOOL getUsage(const struct Message *msg, uint32_t *usageOut);
+const BOOL getCorrelationId(const struct Message *msg, uint32_t *cidOut);
+const BOOL getCode(const struct Message *msg, uint32_t *codeOut);
 
 
 #endif
