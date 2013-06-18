@@ -128,9 +128,11 @@ are identical until byte 24.
 
 /* StringMessage, inherits from Message */
 struct Message {
-	//used locally, not sent to the other side
 	const void *context;
-	uint32_t type;
+	uint32_t type;      //We keep the type in two places, because it needs
+	                    //to be accessed a lot
+	
+	//This contains our message, ready to be sent one byte at a time
 	uint8_t  data[0];   //allocated at runtime to hold all the params
 };
 
@@ -145,27 +147,28 @@ void COMMFreeMessage(struct Message **msg);
 
 /*Packs these fields into a struct Message for sending across a wire.
  *
- If errMsg is not NULL, isError will be set to true. Returns NULL
- *if there's not enough memory (or just crashes, depending on your OS).*/
-struct StringMessage *COMMNewStringMessage(uint32_t usage,
-                                           uint32_t correlationId,
-                                           uint32_t code,
-                                           const char *param1,
-                                           const char *param2,
-                                           const char *param3,
-                                           const char *param4,
-                                           const char *errMsg,
-                                           void *context);
+ *If errMsg is not NULL, isError will be set to true. 
+ *Returns NULL if there's not enough memory 
+ *(or just crashes, depending on your OS).*/
+struct Message *COMMNewStringMessage(uint32_t usage,
+                                     uint32_t correlationId,
+                                     uint32_t code,
+                                     const char *param1,
+                                     const char *param2,
+                                     const char *param3,
+                                     const char *param4,
+                                     const char *errMsg,
+                                     void *context);
 
 /*Same comment as above*/
-struct BinaryMessage *COMMNewBinaryMessage(uint32_t usage, 
-                                           uint32_t correlationId,
-                                           uint32_t code,
-                                           const char *stringParam,
-                                           uint32_t binaryParamSize,
-                                           uint8_t  *binaryParam,
-														 const char *errMsg,
-                                           void *context);
+struct Message *COMMNewBinaryMessage(uint32_t usage, 
+                                     uint32_t correlationId,
+                                     uint32_t code,
+                                     const char *stringParam,
+                                     uint32_t binaryParamSize,
+                                     uint8_t  *binaryParam,
+                                     const char *errMsg,
+                                     void *context);
 
 /*These are convenience methods for getting fields from the struct,
  *since they stored in a format optimized for sending over the wire.
@@ -182,12 +185,13 @@ const uint8_t*COMMgetBinaryParam(const struct Message *msg, uint32_t *sizeOut);
 const char *COMMgetErrMessage(const struct Message  *msg);
 
 /*These are similar, but return false if the message is the wrong type,
- *and put the desired information into the 'out' parameter */ 
-const BOOL getSize(const struct Message *msg, uint32_t *sizeOut);
-const BOOL getType(const struct Message *msg, uint32_t *typeOut);
-const BOOL getUsage(const struct Message *msg, uint32_t *usageOut);
-const BOOL getCorrelationId(const struct Message *msg, uint32_t *cidOut);
-const BOOL getCode(const struct Message *msg, uint32_t *codeOut);
+ *otherwise put the desired information into the 'out' parameter */ 
+BOOL COMMgetSize(const struct Message *msg, uint32_t *sizeOut);
+BOOL COMMgetType(const struct Message *msg, uint32_t *typeOut);
+BOOL COMMgetUsage(const struct Message *msg, uint32_t *usageOut);
+BOOL COMMgetCorrelationId(const struct Message *msg, uint32_t *cidOut);
+BOOL COMMgetCode(const struct Message *msg, uint32_t *codeOut);
+BOOL COMMgetIsErr(const struct Message *msg, BOOL *errOut);
 
 
 #endif

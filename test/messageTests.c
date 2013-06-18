@@ -14,20 +14,22 @@ void testCreateStringMessage(CuTest *tc) {
 	char *param4 = "Except when he talked about world peace.";
 	char *errMsg = NULL;
 	void *context= (void*)88;
-	struct StringMessage *msg = COMMNewStringMessage(usage, correlationId,
+	uint32_t out;
+	BOOL err;
+	struct Message *msg = COMMNewStringMessage(usage, correlationId,
 	                                 code, param1, param2, param3, param4,
 	                                 errMsg, context);
 	CuAssert(tc, "strMsg not null", msg!=NULL);
-	CuAssert(tc, "check type",  TYPE_STRING == msg->type);
-	CuAssert(tc, "check usage", usage == msg->usage);
-	CuAssert(tc, "check cid", correlationId == msg->correlationId);
-	CuAssert(tc, "check code", code == msg->code);
+	CuAssert(tc, "check type",  COMMgetType         (msg, &out) && out==TYPE_STRING  );
+	CuAssert(tc, "check usage", COMMgetUsage        (msg, &out) && out==usage        );
+	CuAssert(tc, "check cid",   COMMgetCorrelationId(msg, &out) && out==correlationId);
+	CuAssert(tc, "check code",  COMMgetCode         (msg, &out) && out==code         );
 	CuAssert(tc, "check param1", NTPstrcmp(param1, COMMgetStringParam((struct Message*)msg,1))==0);
 	CuAssert(tc, "check param2", NTPstrcmp(param2, COMMgetStringParam((struct Message*)msg,2))==0);
 	CuAssert(tc, "check param3", NTPstrcmp(param3, COMMgetStringParam((struct Message*)msg,3))==0);
 	CuAssert(tc, "check param4", NTPstrcmp(param4, COMMgetStringParam((struct Message*)msg,4))==0);
-	CuAssert(tc, "check err is 0 len",NTPstrlen(COMMgetErrMessage((struct Message*)msg))==0);
-	CuAssert(tc, "check isError", msg->isError==FALSE);
+	CuAssert(tc, "check err is 0 len",NTPstrlen(   COMMgetErrMessage((struct Message*)msg))==0);
+	CuAssert(tc, "check isError", COMMgetIsErr(msg, &err) && err==FALSE);
 	CuAssert(tc, "check context", msg->context==context);
 	COMMFreeMessage((struct Message**)&msg);
 	CuAssert(tc, "check message null", msg==NULL);
@@ -37,16 +39,16 @@ void testCreateStringMessage(CuTest *tc) {
 	msg = COMMNewStringMessage(usage, correlationId,
 	                           code, param1, param2, param3, param4, errMsg, context);
 	CuAssert(tc, "strMsg not null", msg!=NULL);
-	CuAssert(tc, "check type",  TYPE_STRING == msg->type);
-	CuAssert(tc, "check usage", usage == msg->usage);
-	CuAssert(tc, "check cid", correlationId == msg->correlationId);
-	CuAssert(tc, "check code", code == msg->code);
-	CuAssert(tc, "check param1", NTPstrcmp(param1, COMMgetStringParam((struct Message*)msg,1))==0);
-	CuAssert(tc, "check param2", NTPstrcmp(param2, COMMgetStringParam((struct Message*)msg,2))==0);
-	CuAssert(tc, "check param3", NTPstrcmp(param3, COMMgetStringParam((struct Message*)msg,3))==0);
-	CuAssert(tc, "check param4", NTPstrcmp(param4, COMMgetStringParam((struct Message*)msg,4))==0);
-	CuAssert(tc, "check errmsg", NTPstrcmp(errMsg, COMMgetErrMessage((struct Message*)msg))==0);
-	CuAssert(tc, "check isError", msg->isError==TRUE);
+	CuAssert(tc, "check type",  COMMgetType         (msg, &out) && out==TYPE_STRING  );
+	CuAssert(tc, "check usage", COMMgetUsage        (msg, &out) && out==usage        );
+	CuAssert(tc, "check cid",   COMMgetCorrelationId(msg, &out) && out==correlationId);
+	CuAssert(tc, "check code",  COMMgetCode         (msg, &out) && out==code         );
+	CuAssert(tc, "check param1", NTPstrcmp(param1, COMMgetStringParam(msg,1))==0);
+	CuAssert(tc, "check param2", NTPstrcmp(param2, COMMgetStringParam(msg,2))==0);
+	CuAssert(tc, "check param3", NTPstrcmp(param3, COMMgetStringParam(msg,3))==0);
+	CuAssert(tc, "check param4", NTPstrcmp(param4, COMMgetStringParam(msg,4))==0);
+	CuAssert(tc, "check errmsg", NTPstrcmp(errMsg, COMMgetErrMessage(msg))==0);
+	CuAssert(tc, "check isError", COMMgetIsErr(msg,&err) && err==TRUE);
 	CuAssert(tc, "check context", msg->context==context);
 	COMMFreeMessage((struct Message**)&msg);
 	CuAssert(tc, "check message null", msg==NULL);
@@ -58,22 +60,25 @@ void testCreateBinaryMessage(CuTest *tc) {
 	uint32_t usage = USAGE_USER;
 	uint32_t correlationId = 12380;
 	uint32_t code  = 119945;
+	uint32_t out;
 	char *   stringParam = "Every parameter should be a string";
 	char *   binaryParam = "Hey, even ascii is binary";
 	uint32_t binaryParamSize = strlen(binaryParam) + 1;
 	char *   errMsg = NULL;
+	BOOL err;
 	void *context = (void*)1234;
-	struct BinaryMessage *msg = COMMNewBinaryMessage(usage, correlationId,
+	struct Message *msg = COMMNewBinaryMessage(usage, correlationId,
 	                       code, stringParam, binaryParamSize, (uint8_t*)binaryParam,
 	                       errMsg, context);
 	CuAssert(tc, "binMsg not null", msg!=NULL);
 	CuAssert(tc, "check type", msg->type==TYPE_BINARY);
-	CuAssert(tc, "check usage", msg->usage==usage);
-	CuAssert(tc, "check corr ID", msg->correlationId==correlationId);
+	CuAssert(tc, "check type2", COMMgetType(msg, &out) && out==TYPE_BINARY);
+	CuAssert(tc, "check usage", COMMgetUsage(msg, &out) && usage == out);
+	CuAssert(tc, "check corr ID", COMMgetCorrelationId(msg, &out) && out==correlationId);
 	CuAssert(tc, "check str",NTPstrcmp(stringParam, COMMgetStringParam((struct Message*)msg,1))==0);
-	CuAssert(tc, "check bin size", binaryParamSize = msg->binaryParamSize);
-	CuAssert(tc, "check bin", NTPstrcmp(binaryParam, COMMgetBinaryParam(msg))==0);
-	CuAssert(tc, "check err", msg->isError == FALSE);
+	CuAssert(tc, "check bin", NTPstrcmp(binaryParam, (char*)COMMgetBinaryParam(msg, &out))==0);
+	CuAssert(tc, "check bin size", binaryParamSize == out);
+	CuAssert(tc, "check err", COMMgetIsErr(msg, &err) && !err);
 	CuAssert(tc, "check err is 0 len",NTPstrlen(COMMgetErrMessage((struct Message*)msg))==0);
 	CuAssert(tc, "check context", msg->context==context);
 	COMMFreeMessage((struct Message**)&msg);
@@ -85,12 +90,13 @@ void testCreateBinaryMessage(CuTest *tc) {
 	          code, stringParam, binaryParamSize, (uint8_t*)binaryParam, errMsg, context);
 	CuAssert(tc, "binMsg not null", msg!=NULL);
 	CuAssert(tc, "check type", msg->type==TYPE_BINARY);
-	CuAssert(tc, "check usage", msg->usage==usage);
-	CuAssert(tc, "check corr ID", msg->correlationId==correlationId);
+	CuAssert(tc, "check type2", COMMgetType(msg, &out) && out==TYPE_BINARY);
+	CuAssert(tc, "check usage", COMMgetUsage(msg, &out) && usage==out);
+	CuAssert(tc, "check corr ID", COMMgetCorrelationId(msg, &out) && out==correlationId);
 	CuAssert(tc, "check str",NTPstrcmp(stringParam, COMMgetStringParam((struct Message*)msg,1))==0);
-	CuAssert(tc, "check bin size", binaryParamSize = msg->binaryParamSize);
-	CuAssert(tc, "check bin", NTPstrcmp(binaryParam, COMMgetBinaryParam(msg))==0);
-	CuAssert(tc, "check err", msg->isError == TRUE);
+	CuAssert(tc, "check bin", NTPstrcmp(binaryParam, (char*)COMMgetBinaryParam(msg, &out))==0);
+	CuAssert(tc, "check bin size", binaryParamSize == out);
+	CuAssert(tc, "check err", COMMgetIsErr(msg, &err) && !err);
 	CuAssert(tc, "check err str",NTPstrcmp(errMsg,COMMgetErrMessage((struct Message*)msg))==0);
 	CuAssert(tc, "check context", msg->context==context);
 	COMMFreeMessage((struct Message**)&msg);
