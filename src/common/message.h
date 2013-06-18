@@ -5,8 +5,7 @@
 
 /*
  * Class to deal with internal message types.
- * We have two types of messages currently, a string message and a 
- * binary message. These will both be a 'subclass' of type message.
+ * We have two types of messages currently, a string and binary message.
  * 
  * Copyright Andrew 2013 Usable under the terms of the GPL 3.0 or greater.
  */
@@ -14,7 +13,7 @@
 //-------------------------------------------------------------------------
 // Section for data structures
 //-------------------------------------------------------------------------
-//Available types. These correspond to the message structs, defined below.
+//Available types, see diagrams below.
 //This header is not available externally to clients, so it's ok to define
 //them with a simple name
 #define TYPE_BINARY 0x1
@@ -67,8 +66,8 @@ TYPE_STRING format
 |       |   |                                                 |   |
 |       |   +-------------------------------------------------+   |
 |       |   | String param 3                                  |   |
-|       |   | (can be length 0, if there is no string, but    |   |
-|       |   |  still needs a null byte, so really length 1)   |   |
+|       |   | (For an empty string set to length 1, since you |   |
+|       |   |  need to send the null character as well)       |   |
 |       |   +-------------------------------------------------+   |
 |       |   | String param 4                                  |   |
 |       |   |                                                 |   |
