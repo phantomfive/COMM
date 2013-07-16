@@ -13,6 +13,6 @@ commTests: $(CSRC) $(HDRS)
 	$(CC) -o commTests $(CFLAGS) $(CSRC) $(LDFLAGS)
 
 clean:
-	rm -fr commTest commTests.dSYM
+	rm -fr commTests commTests.dSYM
 
 .PHONY: run clean
