@@ -102,6 +102,7 @@ BOOL COMM_ListPushBack(COMM_List *list, void *obj) {
 	if(l==NULL) return FALSE;
 
 	l->obj = obj;
+	list->currentSize++;
 	if(list->end==NULL) {
 		list->end   = l;
 		list->start = l;
@@ -110,10 +111,10 @@ BOOL COMM_ListPushBack(COMM_List *list, void *obj) {
 		return TRUE;
 	}
 
-	list->end->next = l;
+	l->next = NULL;
 	l->prev = list->end;
+	list->end->next = l;
 	list->end = l;
-	list->currentSize++;
 	return TRUE;
 }
 
@@ -124,7 +125,7 @@ BOOL COMM_ListObjectAtIndex(COMM_List *list, void **obj, int index) {
 	//find the link
 	l = findLink(list, index);
 	*obj = l->obj;
-	
+
 	return TRUE;
 }
 
@@ -144,14 +145,16 @@ BOOL COMM_ListRemoveAtIndex(COMM_List *list, void **obj, int index) {
 	if(list->end==l)   list->end     = l->prev;
 
 	//adjust our saved index
-	if(index<=list->lastIndex) {
-		index--;
-		if(index==list->lastIndex) 
-		{
-			list->end = list->end->prev;
-			if(list->end==NULL) index=-4;
-		}
+	if(index<list->lastIndex) {
+		list->lastIndex--;
 	}
+	else if(index==list->lastIndex) {
+		list->lastIndex--;
+		list->last = l->prev;
+		if(list->last==NULL) list->lastIndex = -4;
+	}
+
+	list->currentSize--;
 
 	//we removed it, now free it
 	NTPfree(l);

@@ -2,6 +2,7 @@
 #include <CuTest.h>
 
 CuSuite *getMessageSuite();
+CuSuite *getListSuite();
 
 //returns 1 on failure, 0 on success (like unix command line)
 int runAllTests(void) {
@@ -9,6 +10,7 @@ int runAllTests(void) {
 	CuSuite *suite   = CuSuiteNew();
 
 	CuSuiteAddSuite(suite, getMessageSuite());
+	CuSuiteAddSuite(suite, getListSuite());
 
 	CuSuiteRun(suite);
 	CuSuiteSummary(suite, output);
