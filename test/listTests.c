@@ -119,11 +119,80 @@ static void testInsertRemove(CuTest *tc) {
 }
 
 
+static void testLastIndexOptimization(CuTest *tc) {
+	int i;
+	int size;
+	char s[1000];
+	int64_t out;
+	BOOL result;
+	COMM_List *list = allocCOMM_List(7);
+	CuAssert(tc, "alloc fail", list!=NULL);
+
+	//insert a bunch
+	for(i=0;i<7;i++) {
+		void *in = (void*)(int64_t)(i*2);
+		result = COMM_ListPushBack(list, in);
+		sprintf(s, "%d: result %d, size %d",i, result, COMM_ListSize(list));
+		CuAssert(tc,s, result && COMM_ListSize(list)==(i+1));
+	}
+	
+	//remove the object that is being pointed to
+	result = COMM_ListObjectAtIndex(list, (void**)&out, 3);
+	CuAssert(tc, "get object", result && out==6);
+	result = COMM_ListRemoveAtIndex(list, (void**)&out, 3);
+	size = COMM_ListSize(list);
+	CuAssert(tc, "remove object", result && out==6 && size==6);
+	result = COMM_ListObjectAtIndex(list, (void**)&out, 2);
+	CuAssert(tc, "get object 2", result && out==4);
+	{
+		int nums[] = {0, 2, 4, 8, 10, 12};	
+		verifyListItems(tc, "remove pointed to", list, 6, nums, 0);
+	}
+
+	//remove the object before the one being pointed to
+	result = COMM_ListObjectAtIndex(list, (void**)&out, 4);
+	CuAssert(tc, "get object", result && out==10);
+	result = COMM_ListRemoveAtIndex(list, (void**)&out,1);
+	size = COMM_ListSize(list);
+	CuAssert(tc, "remove object", result && out==2 && size==5);
+	result = COMM_ListObjectAtIndex(list, (void**)&out, 3);
+	CuAssert(tc, "get object again", result && out==10);
+	{
+		int nums[] = {0, 4, 8, 10, 12};
+		verifyListItems(tc, "remove object before", list, 5, nums, 0);
+	}
+
+	//remove thoe one being pointed at 0
+	result = COMM_ListObjectAtIndex(list, (void**)&out, 0);
+	CuAssert(tc, "get object", result && out==0);
+	result = COMM_ListRemoveAtIndex(list, (void**)&out, 0);
+	size=COMM_ListSize(list);
+	CuAssert(tc, "remove oject", result && out==0 && size==4);
+	result = COMM_ListObjectAtIndex(list, (void**)&out, 0);
+	CuAssert(tc, "get object again", result && out==4);
+	{
+		int nums[] = {4, 8, 10, 12};
+		verifyListItems(tc, "remove pointed at 0", list, 4, nums, 0);
+	}
+
+	//remove the rest
+	for(i=0;i<4;i++) {
+		int nums[] = {4, 8, 10, 12};
+		result = COMM_ListRemoveAtIndex(list, (void**)&out, 0);
+		CuAssert(tc, "removing", result && out==nums[i]);
+		CuAssert(tc, "size", COMM_ListSize(list)==3-i);
+	}
+
+	freeCOMM_List(&list);
+	CuAssert(tc, "ptr is null", list==NULL);
+}
+
+
 CuSuite *getListSuite(void) {
 	CuSuite *suite = CuSuiteNew();
 
 	SUITE_ADD_TEST(suite, testInsertRemove);
-
+	SUITE_ADD_TEST(suite, testLastIndexOptimization);
 	return suite;
 }
 

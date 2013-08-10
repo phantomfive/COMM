@@ -4,7 +4,7 @@
 /*****************************************************************************
  * Perhaps the biggest deficiency in the C standard library is the lack      *
  * of a generic list implementation. This is an attempt to remedy that lack, *
- * of only for my own applications.                                          *
+ * if only for my own applications.                                          *
  *                                                                           *
  * Copyright 2013 Andrew Thompson Usable under the terms of the GPL.         *
  *****************************************************************************/

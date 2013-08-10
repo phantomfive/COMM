@@ -115,6 +115,9 @@ BOOL COMM_ListPushBack(COMM_List *list, void *obj) {
 	l->prev = list->end;
 	list->end->next = l;
 	list->end = l;
+
+	list->last=NULL;
+	list->lastIndex = -4;
 	return TRUE;
 }
 
@@ -145,10 +148,10 @@ BOOL COMM_ListRemoveAtIndex(COMM_List *list, void **obj, int index) {
 	if(list->end==l)   list->end     = l->prev;
 
 	//adjust our saved index
-	if(index<list->lastIndex) {
+	if(index < list->lastIndex) {
 		list->lastIndex--;
 	}
-	else if(index==list->lastIndex) {
+	else if(index == list->lastIndex) {
 		list->lastIndex--;
 		list->last = l->prev;
 		if(list->last==NULL) list->lastIndex = -4;
