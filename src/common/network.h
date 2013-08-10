@@ -16,10 +16,17 @@ void COMMshutdownNetwork(COMMnet **net);
 /*Runs the network for one loop*/
 COMMStatus COMMrunNetwork(COMMnet *net);
 
-void COMMnetConnect(COMMnet *net, const char *dest, uint16_t port);
 
-void COMMnetListen(COMMnet *net, uint16_t port);
 
+//need to connect
+COMMSock *COMMnetConnect(COMMnet *net, const char *dest, uint16_t port);
+
+
+//need to listen
+COMMSock COMMnetListen(COMMnet *net, uint16_t port);
+
+
+//Absolutely need these
 void COMMnetSendData(COMMnet *net, const uint8_t*data, uint32_t len,
                      int timeoutSeconds, COMMnetSent_cb*cb, void *context);
 

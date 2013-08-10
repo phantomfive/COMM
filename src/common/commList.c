@@ -1,11 +1,13 @@
 /*****************************************************************************
  * Copyright 2013 Andrew Thompson Usable under the terms of the GPL.         *
  *****************************************************************************/
+
+#include <notrap/notrap.h>
 #include "commList.h"
 
 typedef struct Link_struct {
-	Link *next;
-	Link *prev;
+	struct Link_struct *next;
+	struct Link_struct *prev;
 	void *obj;
 } Link;
 
@@ -25,7 +27,7 @@ struct COMM_List_struct {
 //-------------------------------------------------------------------------
 // Private API
 //-------------------------------------------------------------------------
-static Link *findLink(List *list, int index) {
+static Link *findLink(COMM_List *list, int index) {
 	Link *l;
 	int i;
 
@@ -63,7 +65,6 @@ static Link *findLink(List *list, int index) {
 	return l;
 }
 
-}
 
 
 //-------------------------------------------------------------------------
@@ -72,7 +73,7 @@ static Link *findLink(List *list, int index) {
 
 
 COMM_List *allocCOMM_List(int maxSize) {
-	COMM_List *rv = (COMM_List*)malloc(sizeof(COMM_List));
+	COMM_List *rv = (COMM_List*)NTPmalloc(sizeof(COMM_List));
 	if(rv==NULL) return NULL;
 
 	rv->maxSize = maxSize;
@@ -100,15 +101,13 @@ BOOL COMM_ListPushBack(COMM_List *list, void *obj) {
 	Link *l = (Link*)NTPmalloc(sizeof(Link));
 	if(l==NULL) return FALSE;
 
-	list->lastIndex = -4;
-
 	l->obj = obj;
 	if(list->end==NULL) {
 		list->end   = l;
 		list->start = l;
-		list->next  = NULL;
-		list->prev  = NULL;
-		return;
+		l->next  = NULL;
+		l->prev  = NULL;
+		return TRUE;
 	}
 
 	list->end->next = l;
@@ -120,8 +119,7 @@ BOOL COMM_ListPushBack(COMM_List *list, void *obj) {
 
 BOOL COMM_ListObjectAtIndex(COMM_List *list, void **obj, int index) {
 	Link *l;
-	int i;
-	if(index>=list->size || index<0) return FALSE;
+	if(index>=list->currentSize || index<0) return FALSE;
 	
 	//find the link
 	l = findLink(list, index);
@@ -132,9 +130,8 @@ BOOL COMM_ListObjectAtIndex(COMM_List *list, void **obj, int index) {
 
 
 BOOL COMM_ListRemoveAtIndex(COMM_List *list, void **obj, int index) {
-	void *rv;
 	Link *l;
-	if(index>=list->size || index<0) return FALSE;
+	if(index>=list->currentSize || index<0) return FALSE;
 
 	//find the link
 	l = findLink(list, index);
@@ -147,10 +144,13 @@ BOOL COMM_ListRemoveAtIndex(COMM_List *list, void **obj, int index) {
 	if(list->end==l)   list->end     = l->prev;
 
 	//adjust our saved index
-	if(index==list->lastIndex) {
+	if(index<=list->lastIndex) {
 		index--;
-		list->last = last->prev;
-		if(list->last==NULL) index=-4;
+		if(index==list->lastIndex) 
+		{
+			list->end = list->end->prev;
+			if(list->end==NULL) index=-4;
+		}
 	}
 
 	//we removed it, now free it

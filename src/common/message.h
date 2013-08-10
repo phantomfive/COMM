@@ -1,7 +1,7 @@
 #ifndef COMM_MESSAGE_H
 #define COMM_MESSAGE_H
 
-#include <notrap.h>
+#include <notrap/notrap.h>
 
 /*
  * Class to deal with internal message types.
