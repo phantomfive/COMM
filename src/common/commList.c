@@ -25,8 +25,9 @@ struct COMM_List_struct {
 
 
 //-------------------------------------------------------------------------
-// Private API
+// Private functions
 //-------------------------------------------------------------------------
+//Duplicated functionality in a couple other methods.
 static Link *findLink(COMM_List *list, int index) {
 	Link *l;
 	int i;

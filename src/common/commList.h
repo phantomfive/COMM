@@ -13,15 +13,25 @@
 
 typedef struct COMM_List_struct COMM_List;
 
-COMM_List *allocCOMM_List(int maxSize);
-void freeCOMM_List();
 
+//methods to free and release the list. For an unlimited max size,
+//pass in a negative number. freeCOMM_List() sets 'list' to NULL
+COMM_List *allocCOMM_List(int maxSize);
+void freeCOMM_List(COMM_List **list);
+
+
+//Add an object to the end of the list, return TRUE or FALSe
 BOOL COMM_ListPushBack(COMM_List *list, void *obj);
 
+//Retrieve the object from the list and store it in *obj.
+//There is an optimization for when each item is accessed one after another.
 BOOL COMM_ListObjectAtIndex(COMM_List *list, void **obj, int index);
 
+//Removes the object at index from the list. If obj is not NULL,
+//stores the removed value in *obj.
 BOOL COMM_ListRemoveAtIndex(COMM_List *list, void **obj, int index);
 
+//Returns the current size of the list
 int COMM_ListSize(COMM_List *list);
 
 
