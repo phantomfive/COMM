@@ -9,11 +9,24 @@
 
 struct COMMnet;
 
+//---------------------------------------------------------------------
+// Callback methods. Need to be declared before the API
+//---------------------------------------------------------------------
+void (*COMMnetListen_cb)(COMMnet *net, COMMSock *acceptedSock, void *context);
+void (*COMMnetSent_cb)(COMMnet *net, int bytesSent, void *context);
+void (*COMMnetRecvd_cb)(COMMnet *net,int bytesRecvd,uint8_t*data,void*context);
+
+
+
+//---------------------------------------------------------------------
+// public API
+//---------------------------------------------------------------------
+
 /*Only fails if there is no memory*/
 COMMnet *COMMinitNetwork();
 void COMMshutdownNetwork(COMMnet **net);
 
-/*Runs the network for one loop*/
+/*Runs the network for one loop. Call frequently.*/
 COMMStatus COMMrunNetwork(COMMnet *net);
 
 
@@ -23,7 +36,8 @@ COMMSock *COMMnetConnect(COMMnet *net, const char *dest, uint16_t port);
 
 
 //need to listen
-COMMSock COMMnetListen(COMMnet *net, uint16_t port);
+BOOL COMMnetListen(COMMnet *net, uint16_t port, COMMnetAccept_cb *cb,
+                        void *context);
 
 
 //Absolutely need these
