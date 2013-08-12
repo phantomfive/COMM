@@ -15,7 +15,8 @@ typedef struct COMM_List_struct COMM_List;
 
 
 //methods to free and release the list. For an unlimited max size,
-//pass in a negative number. freeCOMM_List() sets 'list' to NULL
+//pass in a negative number. freeCOMM_List() sets 'list' to NULL, if NULL
+//is passed in, nothing bad happens.
 COMM_List *allocCOMM_List(int maxSize);
 void freeCOMM_List(COMM_List **list);
 

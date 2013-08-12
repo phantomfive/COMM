@@ -7,7 +7,7 @@
  ***************************************************************************/
 #include <notrap.h>
 
-struct COMMnet;
+typedef struct COMMnet_struct COMMnet;
 
 //---------------------------------------------------------------------
 // Callback methods. Need to be declared before the API
