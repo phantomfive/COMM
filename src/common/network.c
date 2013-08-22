@@ -11,17 +11,16 @@
 
 typedef struct COMMnet_struct {
 
-	COMM_List *sendList;
-	COMM_List *recvList;
-	COMM_List *lstnList;
-	COMM_List *cnctList;
+	COMM_List *sockList;
 
 }COMMnet;
 
 
+
 typedef struct COMMsock_struct {
 	NTPSock *sock;
-
+	
+	BOOL isListening;
 
 }COMMSock;
 
@@ -29,6 +28,15 @@ typedef struct COMMsock_struct {
 // Private methods
 //---------------------------------------------------------------------
 
+static COMMStatus checkConnectingSockets(COMMnet *net) {
+	//go through the list of sockets, and
+	//query if it is done
+
+
+	//if it is done, move it to the 
+
+
+}
 
 //---------------------------------------------------------------------
 // public API
@@ -41,7 +49,6 @@ COMMnet *COMMinitNetwork() {
 	rv->sendList = allocCOMM_List(200);
 	rv->recvList = allocCOMM_List(200);
 	rv->lstnList = allocCOMM_List(200);
-	rv->cnctList = allocCOMM_List(200);
 	if(rv->sendList==NULL || rv->recvList==NULL || rv->lstnList==NULL)
 		goto ERR_LISTS;
 
@@ -66,17 +73,34 @@ void COMMshutdownNetwork(COMMnet **net) {
 	freeCOMM_List(&(*net)->sendList);
 	freeCOMM_List(&(*net)->recvList);
 	freeCOMM_List(&(*net)->lstnList);
-	freeCOMM_List(&(*net)->cnctList);
 
 	NTPfree(*net);
 	*net = NULL;
 }
 
 COMMStatus COMMrunNetwork(COMMnet *net) {
+	COMMStatus rv;
+	NTP_FD_SET readSet;
+	NTP_FD_SET writeSet;
+	NTP_ZERO_SET(&readSet);
+	NTP_ZERO_SET(&writeSet);
+
+	//add all sockets into set for doing a select
+	//to see which ones need attention
+	
+
+	//go through all sockets and do the read/write or whatever
 }
 
 
 COMMSock *COMMnetConnect(COMMnet *net, const char *dest, uint16_t port) {
+	//alloc space for the sock
+
+	//connect the socket, and if not error, return it.
+	//The user will have to wait for the connect to succeed or fail.
+
+
+	//error handling
 
 }
 
@@ -84,11 +108,23 @@ COMMSock *COMMnetConnect(COMMnet *net, const char *dest, uint16_t port) {
 BOOL COMMnetListen(COMMnet *net, uint16_t port, COMMnetAccept_cb *cb,
                         void *context) {
 
+	//alloc memory for the new socket 
+
+	//Start a new socket listening on the port
+
+	//add it to our socket list
+
+	//error handling
 }
 
 
 void COMMnetSendData(COMMnet *net, const uint8_t*data, uint32_t len,
                      int timeoutSeconds, COMMnetSent_cb*cb, void *context) {
+
+	//arg, this is the hardest part.
+	//Have to figure out how to send and receive.
+	//Should it put the message on a queue? Or should it only allow one
+	//send at a time?
 
 }
 
