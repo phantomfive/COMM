@@ -18,8 +18,13 @@ typedef struct COMMnet_struct {
 
 
 typedef struct COMMsock_struct {
+	COMMnet *net;       //put this here so we can figure out
+	                    //which network we are connected to
+	                    //without passing it in to every function
 	NTPSock *sock;
-	
+	COMM_List *sendQueue;
+	COMM_List *recvQueue;
+
 	BOOL isListening;
 
 }COMMSock;
@@ -118,19 +123,17 @@ BOOL COMMnetListen(COMMnet *net, uint16_t port, COMMnetAccept_cb *cb,
 }
 
 
-void COMMnetSendData(COMMnet *net, const uint8_t*data, uint32_t len,
+void COMMnetSendData(COMMSock *sock, const uint8_t*data, uint32_t len,
                      int timeoutSeconds, COMMnetSent_cb*cb, void *context) {
 
-	//arg, this is the hardest part.
-	//Have to figure out how to send and receive.
-	//Should it put the message on a queue? Or should it only allow one
-	//send at a time?
-
+	//each socket needs to have a send queue and a recv queue.
+	//So here we'll add it to the send queue
 }
 
-void COMMnetRecvData(COMMnet *net, const uint8_t*data, uint32_t len,
+void COMMnetRecvData(COMMSock *sock, const uint8_t*data, uint32_t len,
                      int timeoutSeconds, COMMnetRecvd_cb*cb, void*context)  {
-
+	//each socket needs to have a send queue and a recv queue
+	//So here we'll add it to the recv queue
 }
 
 
