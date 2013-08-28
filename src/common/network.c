@@ -16,6 +16,15 @@ typedef struct COMMnet_struct {
 }COMMnet;
 
 
+typedef struct dataChunk {
+	void *data;
+	int  len;
+	int timeoutSeconds;
+
+	void *context;
+	COMMnetSent_cb  *sendCb;
+	COMMnetRecvd_cb *recvCb;
+} DataChunk;
 
 typedef struct COMMsock_struct {
 	COMMnet *net;       //put this here so we can figure out
@@ -51,23 +60,13 @@ COMMnet *COMMinitNetwork() {
 	COMMnet *rv = NTPmalloc(sizeof(COMMnet));
 	if(rv==NULL) goto ERR_NO_MEM;
 
-	rv->sendList = allocCOMM_List(200);
-	rv->recvList = allocCOMM_List(200);
-	rv->lstnList = allocCOMM_List(200);
-	if(rv->sendList==NULL || rv->recvList==NULL || rv->lstnList==NULL)
-		goto ERR_LISTS;
+	rv->sockList = allocCOMM_List(200);
+	if(rv->sockList==NULL) {
+		NTPFree(rv);
+		rv = NULL;
+	}
 
-	//success
 	return rv;
-
-ERR_LISTS:
-	freeCOMM_List(&rv->sendList);
-	freeCOMM_List(&rv->recvList);
-	freeCOMM_List(&rv->lstnList);
-	NTPfree(rv);
-
-ERR_NO_MEM:
-	return NULL;
 }
 
 
@@ -75,9 +74,7 @@ void COMMshutdownNetwork(COMMnet **net) {
 	if(net==NULL || *net==NULL) return;
 
 #error "Don't forget to remove the items in the list"
-	freeCOMM_List(&(*net)->sendList);
-	freeCOMM_List(&(*net)->recvList);
-	freeCOMM_List(&(*net)->lstnList);
+	freeCOMM_List(&(*net)->sockList);
 
 	NTPfree(*net);
 	*net = NULL;
@@ -125,24 +122,50 @@ BOOL COMMnetListen(COMMnet *net, uint16_t port, COMMnetAccept_cb *cb,
 
 void COMMnetSendData(COMMSock *sock, const uint8_t*data, uint32_t len,
                      int timeoutSeconds, COMMnetSent_cb*cb, void *context) {
+	
+	//allocate memory for our msg
+	DaTaChunk *msg = (DataChunk*)NTPMalloc(sizeof(DataChunk));
+	if(msg==NULL) {
+		notifySendErr(sock, data, len, cb, context, "Out of mem in COMMnetSendData");
+		return;
+	}
+	
+	//fill in the fields of the message
+	msg->data = data;
+	msg->len  = len;
+	msg->timeoutSeconds = timeoutSeconds;
+	msg->context        = context;
+	msg->sendCb         = cb;
+	msg->recvCb         = NULL;
 
-	//each socket needs to have a send queue and a recv queue.
-	//So here we'll add it to the send queue
+	//put it on the send list
+	if(!COMM_ListPushBack(sock->sendQueue, msg)) {
+		notifySendErr(sock, data, len, cb, context,"No room on send queue in COMMnetSendData");
+	}
 }
 
-void COMMnetRecvData(COMMSock *sock, const uint8_t*data, uint32_t len,
+void COMMnetRecvData(COMMSock *sock, const uint8_t *data, uint32_t len,
                      int timeoutSeconds, COMMnetRecvd_cb*cb, void*context)  {
-	//each socket needs to have a send queue and a recv queue
-	//So here we'll add it to the recv queue
+	
+	//allocate memory for our msg
+	DataChunk *msg = (DataChunk*)NTPMalloc(sizeof(DataChunk));
+	if(msg==NULL) {
+		notifyRecvErr(sock, data, len, cb, context, "Out of memory in COMMnetRecvData");
+		return;
+	}
+
+	//fill in the fields of the message
+	msg->data           = data;
+	msg->len            = len;
+	msg->timeoutSeconds = timeoutSeconds;
+	msg->context        = context;
+	msg->sendCb         = NULL;
+	msg->recvCb         = cb;
+
+	//add the message to the recv queue
+	if(!COMM_ListPushBack(sock->recvQueue, msg)) {
+		notifyRecvErr(sock, data, len, cb, context, "List full in COMMnetRecvData");
+	}
 }
 
-
-
-
-
-
-
-
-
-#endif
 
