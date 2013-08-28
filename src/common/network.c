@@ -34,7 +34,10 @@ typedef struct COMMsock_struct {
 	COMM_List *sendQueue;
 	COMM_List *recvQueue;
 
+	//for listening sockets
 	BOOL isListening;
+	COMMnetAccept_cb *accept_cb;
+	void *acceptContext;
 
 }COMMSock;
 
@@ -42,13 +45,15 @@ typedef struct COMMsock_struct {
 // Private methods
 //---------------------------------------------------------------------
 
-static COMMStatus checkConnectingSockets(COMMnet *net) {
-	//go through the list of sockets, and
-	//query if it is done
+static void doSend(COMMSock *sock, int index) {
 
+}
 
-	//if it is done, move it to the 
+static void doRecv(COMMSock *sock, int index) {
 
+}
+
+static void doAccept(COMMSock *sock, int index) {
 
 }
 
@@ -81,7 +86,9 @@ void COMMshutdownNetwork(COMMnet **net) {
 }
 
 COMMStatus COMMrunNetwork(COMMnet *net) {
-	COMMStatus rv;
+	int i;
+	COMMSock *sock;
+	int size;
 	NTP_FD_SET readSet;
 	NTP_FD_SET writeSet;
 	NTP_ZERO_SET(&readSet);
@@ -89,9 +96,51 @@ COMMStatus COMMrunNetwork(COMMnet *net) {
 
 	//add all sockets into set for doing a select
 	//to see which ones need attention
+	size = COMM_ListSize(net->sockList);
+	for(i=0;i<size;i++) {
+		COMM_ListObjectAtIndex(net->sockList, &sock, i);
+#error "Should we check this error?"
+
+#error "Make sure the sockets are connected before doing this"
+		if(sock->isListening || COMM_ListSize(sock->recvQueue)>0) {
+			NTP_FD_ADD(sock, &readSet);
+		}
+		if(COMM_ListSize(sock->sendQueue)>0 && sockStatusIsConnected) {
+			NTP_FD_Add(sock, &writeSet);
+		}
+	}
 	
 
+	//now actually do the select
+	result = NTPSelect(readSet, writeSet, 1);
+	if(result<0) {
+#error "Definitely handle this error"
+	}
+	else if(result==0) {
+		//timed out, no problem
+		return NTPSuccess;
+	}
+
 	//go through all sockets and do the read/write or whatever
+	//some of these can be removed while going through the list
+	//so go through it backwards
+	for(i=size-1;i>=0;i--) {
+		COMM_ListObjectAtIndex(net->sockList, &sock, i);
+#error "Once again, should we check this error?"
+		
+		if(NTP_FD_ISSET(sock, readSet)) {
+			if(sock->isListening) {
+				doAccept(sock, i);
+			}else {
+				doRecv(sock, i);
+			}
+		}
+		if(NTP_FD_ISSET(sock, writeSet)) {
+			doSend(sock, i);
+		}
+	}
+
+#error "Handle return value here"
 }
 
 
@@ -103,6 +152,9 @@ COMMSock *COMMnetConnect(COMMnet *net, const char *dest, uint16_t port) {
 	rv->recvQueue = allocCOMM_List(1000);
 	if(rv->sendQueue==NULL || rv->recvQueue==NULL) goto ERR_QUEUES;
 
+	//add it to our socket list
+	if(!COMM_ListPushBack(net->sockList,rv)) goto ERR_FULL;
+
 	//connect the socket, and if not error, return it.
 	//The user will have to wait for the connect to succeed or fail.
 	rv->net = net;
@@ -110,11 +162,15 @@ COMMSock *COMMnetConnect(COMMnet *net, const char *dest, uint16_t port) {
 	rv->sock = NTPConnectTCP(dest, port);
 	if(rv->sock==NULL) goto ERR_CONNECT;
 
+
 	return rv; //SUCCESS
 
+#error "Deal with error messages somehow"
 
 	//error handling
 ERR_CONNECT:
+	COMM_ListRemoveAtIndex(net->sockList, NULL, COMM_ListSize(net->sockList)-1);
+ERR_FULL:
 ERR_QUEUES:
 	freeCOMM_List(&rv->sendQueue);
 	freeCOMM_List(&rv->recvQueue);
@@ -129,12 +185,35 @@ BOOL COMMnetListen(COMMnet *net, uint16_t port, COMMnetAccept_cb *cb,
                         void *context) {
 
 	//alloc memory for the new socket 
-
-	//Start a new socket listening on the port
+	COMMSock *rv = (COMMSock*)NTPMalloc(sizeof(COMMSock));
+	if(rv==NULL) goto ERR_NO_MEM;
+	rv->sendQueue = allocCOMM_List(0); //can be zero since we aren't sending
+	rv->recvQueue = allocCOMM_List(0); //can be zero since we aren't receiving
+	if(rv->sendQueue==NULL || rv->recvQueue==NULL) goto ERR_QUEUES;
 
 	//add it to our socket list
+	if(!COMM_ListPushBack(net->sockList,rv)) goto ERR_FULL;
 
+	//Start a new socket listening on the port
+	rv->net = net;
+	rv->isListening = TRUE;
+	rv->sock = NTPListen(port);
+	if(rv->sock==NULL) goto ERR_LISTEN;
+
+	return rv; //SUCCESS
+
+#error "deal with error messages somehow"
 	//error handling
+ERR_LISTEN:
+	COMM_ListRemoveAtIndex(net->sockList, NULL, COMM_ListSize(net->sockList)-1);
+ERR_FULL:
+ERR_QUEUES:
+	freeCOMM_List(&rv->sendQueue);
+	freeCOMM_List(&rv->recvQueue);
+	NTPFree(rv);
+
+ERR_NO_MEM:
+	return NULL;
 }
 
 
