@@ -97,13 +97,31 @@ COMMStatus COMMrunNetwork(COMMnet *net) {
 
 COMMSock *COMMnetConnect(COMMnet *net, const char *dest, uint16_t port) {
 	//alloc space for the sock
+	COMMSock *rv = (COMMSock*)malloc(sizeof(COMMSock));
+	if(rv==NULL) goto ERR_NO_MEM;
+	rv->sendQueue = allocCOMM_List(1000);
+	rv->recvQueue = allocCOMM_List(1000);
+	if(rv->sendQueue==NULL || rv->recvQueue==NULL) goto ERR_QUEUES;
 
 	//connect the socket, and if not error, return it.
 	//The user will have to wait for the connect to succeed or fail.
+	rv->net = net;
+	rv->isListening = FALSE;
+	rv->sock = NTPConnectTCP(dest, port);
+	if(rv->sock==NULL) goto ERR_CONNECT;
+
+	return rv; //SUCCESS
 
 
 	//error handling
+ERR_CONNECT:
+ERR_QUEUES:
+	freeCOMM_List(&rv->sendQueue);
+	freeCOMM_List(&rv->recvQueue);
+	NTPFree(rv);
 
+ERR_NO_MEM:
+	return NULL;
 }
 
 
