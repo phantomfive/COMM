@@ -124,7 +124,11 @@ BOOL COMM_ListPushBack(COMM_List *list, void *obj) {
 
 BOOL COMM_ListObjectAtIndex(COMM_List *list, void **obj, int index) {
 	Link *l;
-	if(index>=list->currentSize || index<0) return FALSE;
+	if(index>=list->currentSize || index<0) 
+	{
+		*obj = NULL;
+		return FALSE;
+	}
 	
 	//find the link
 	l = findLink(list, index);
