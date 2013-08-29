@@ -45,6 +45,10 @@ typedef struct COMMsock_struct {
 // Private methods
 //---------------------------------------------------------------------
 
+static void handleSockError(COMMSock *sock, int index) {
+
+}
+
 static void doSend(COMMSock *sock, int index) {
 
 }
@@ -85,28 +89,36 @@ void COMMshutdownNetwork(COMMnet **net) {
 	*net = NULL;
 }
 
+//Select seems simple enough but functions using it
+//always seem to end up so lengthy
 COMMStatus COMMrunNetwork(COMMnet *net) {
 	int i;
 	COMMSock *sock;
 	int size;
+
 	NTP_FD_SET readSet;
 	NTP_FD_SET writeSet;
 	NTP_ZERO_SET(&readSet);
 	NTP_ZERO_SET(&writeSet);
 
 	//add all sockets into set for doing a select
-	//to see which ones need attention
+	//to see which ones need attention.
+	//Go through the list in reverse because if it's an error we could remove
+	//elements.
 	size = COMM_ListSize(net->sockList);
-	for(i=0;i<size;i++) {
+	for(i=size-1;i>=0;i--) {
 		COMM_ListObjectAtIndex(net->sockList, &sock, i);
-#error "Should we check this error?"
 
-#error "Make sure the sockets are connected before doing this"
+		status = NTPSockStatus(sock->sock);
+		if(status==NTPSOCK_CONNECTING) continue;
+		if(status==NTPSOCK_ERROR) {handleSockError(sock, i); continue;}
+
+		//add to write set or read set
 		if(sock->isListening || COMM_ListSize(sock->recvQueue)>0) {
-			NTP_FD_ADD(sock, &readSet);
+			NTP_FD_ADD(sock->sock, &readSet);
 		}
-		if(COMM_ListSize(sock->sendQueue)>0 && sockStatusIsConnected) {
-			NTP_FD_Add(sock, &writeSet);
+		if(COMM_ListSize(sock->sendQueue)>0) {
+			NTP_FD_Add(sock-sock, &writeSet);
 		}
 	}
 	
@@ -121,12 +133,11 @@ COMMStatus COMMrunNetwork(COMMnet *net) {
 		return NTPSuccess;
 	}
 
-	//go through all sockets and do the read/write or whatever
-	//some of these can be removed while going through the list
+	//go through all sockets and do the read/write or whatever.
+	//Some of these can be removed while going through the list
 	//so go through it backwards
 	for(i=size-1;i>=0;i--) {
 		COMM_ListObjectAtIndex(net->sockList, &sock, i);
-#error "Once again, should we check this error?"
 		
 		if(NTP_FD_ISSET(sock, readSet)) {
 			if(sock->isListening) {
