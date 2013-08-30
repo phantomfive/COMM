@@ -12,6 +12,8 @@
 typedef struct COMMnet_struct {
 
 	COMM_List *sockList;
+	BOOL inErrState;
+	const char *lastError;
 
 }COMMnet;
 
@@ -44,6 +46,12 @@ typedef struct COMMsock_struct {
 //---------------------------------------------------------------------
 // Private methods
 //---------------------------------------------------------------------
+
+static BOOL setLastError(COMMNet *net, const char *msg) {
+	net->lastError  = msg;
+	net->inErrState = TRUE;
+	return FALSE;
+}
 
 static void handleSockError(COMMSock *sock, int index) {
 
@@ -89,9 +97,13 @@ void COMMshutdownNetwork(COMMnet **net) {
 	*net = NULL;
 }
 
+const char *COMMnetGetLastErr(COMMnet *net) {
+	return net->lastError;
+}
+
 //Select seems simple enough but functions using it
 //always seem to end up so lengthy
-COMMStatus COMMrunNetwork(COMMnet *net) {
+BOOL COMMrunNetwork(COMMnet *net) {
 	int i;
 	COMMSock *sock;
 	int size;
@@ -100,6 +112,8 @@ COMMStatus COMMrunNetwork(COMMnet *net) {
 	NTP_FD_SET writeSet;
 	NTP_ZERO_SET(&readSet);
 	NTP_ZERO_SET(&writeSet);
+
+	if(net->inErrState) return FALSE;
 
 	//add all sockets into set for doing a select
 	//to see which ones need attention.
@@ -126,11 +140,11 @@ COMMStatus COMMrunNetwork(COMMnet *net) {
 	//now actually do the select
 	result = NTPSelect(readSet, writeSet, 1);
 	if(result<0) {
-#error "Definitely handle this error"
+		return setLastError(net, NTPSockErr(NULL));
 	}
 	else if(result==0) {
 		//timed out, no problem
-		return NTPSuccess;
+		return TRUE;
 	}
 
 	//go through all sockets and do the read/write or whatever.
@@ -150,8 +164,8 @@ COMMStatus COMMrunNetwork(COMMnet *net) {
 			doSend(sock, i);
 		}
 	}
-
-#error "Handle return value here"
+	
+	return TRUE;
 }
 
 

@@ -27,8 +27,9 @@ COMMnet *COMMinitNetwork();
 void COMMshutdownNetwork(COMMnet **net);
 
 /*Runs the network for one loop. Call frequently.*/
-COMMStatus COMMrunNetwork(COMMnet *net);
+BOOL COMMrunNetwork(COMMnet *net);
 
+const char *COMMnetGetLastErr(COMMnet *net);
 
 
 //need to connect
