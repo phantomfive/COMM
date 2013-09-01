@@ -40,6 +40,8 @@ COMMSock *COMMnetConnect(COMMnet *net, const char *dest, uint16_t port);
 BOOL COMMnetListen(COMMnet *net, uint16_t port, COMMnetAccept_cb *cb,
                         void *context);
 
+//close the sock, set *sock to NULL
+void COMMnetCloseSock(COMMSock **sock);
 
 //Absolutely need these
 void COMMnetSendData(COMMnet *net, const uint8_t*data, uint32_t len,

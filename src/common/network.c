@@ -36,6 +36,9 @@ typedef struct COMMsock_struct {
 	COMM_List *sendQueue;
 	COMM_List *recvQueue;
 
+	int currentAmountRead;
+	int currentAmountWritten;
+
 	//for listening sockets
 	BOOL isListening;
 	COMMnetAccept_cb *accept_cb;
@@ -47,26 +50,96 @@ typedef struct COMMsock_struct {
 // Private methods
 //---------------------------------------------------------------------
 
-static BOOL setLastError(COMMNet *net, const char *msg) {
+static BOOL setLastError(COMMnet *net, const char *msg) {
 	net->lastError  = msg;
 	net->inErrState = TRUE;
 	return FALSE;
 }
+
+//allocate a sock and set some initial defaults
+//returns NULL if there's no memory
+static COMMSock *allocNewSock(COMMnet *net) {
+	//alloc space for the sock
+	COMMSock *rv = (COMMSock*)NTPmalloc(sizeof(COMMSock));
+	if(rv==NULL) {
+		setLastError(net, "No memory");
+		return NULL;
+	}
+
+	//allocate space for the queues
+	rv->sendQueue = allocCOMM_List(1000);
+	rv->recvQueue = allocCOMM_List(1000);
+	if(rv->sendQueue==NULL || rv->recvQueue==NULL) {
+		freeCOMM_List(&rv->sendQueue);
+		freeCOMM_List(&rv->recvQueue);
+		setLastError(net, "Out of memory");
+		return NULL;
+	}
+
+	//add it to our socket list
+	if(!COMM_ListPushBack(net->sockList,rv)) {
+		setLastError(net, "Socket list is full, too many sockets open");
+		COMMnetCloseSock(&rv);
+		return NULL;
+	}
+
+	//set some reasonable defaults
+	rv->net = net;
+	rv->isListening = FALSE;
+	rv->currentAmountWritten = 0;
+	rv->currentAmountRead    = 0;
+	return rv;
+}
+
 
 static void handleSockError(COMMSock *sock, int index) {
 
 }
 
 static void doSend(COMMSock *sock, int index) {
+	//call NTP send
 
+	//handle sock error
+
+	//adjust send pointer
+
+	//if entire section received,
+	//notify user and pop send stack
 }
 
 static void doRecv(COMMSock *sock, int index) {
+	//call NTP recv
+
+	//handle sock error
+
+	//adjust recv pointer
+
+	//if ! entire section received, return
+
+	//pass result on to user, pop from stack
 
 }
 
-static void doAccept(COMMSock *sock, int index) {
-
+static void doAccept(COMMSock *listenSock, int index) {
+	COMMSock *rv; //it's called rv even though it's not
+	              //returned, it's passed on to the end user
+	NTPSock *newSock = NTPAccept(listenSock);
+	if(newSock==NULL) {
+		//This is probably a temporary error
+		setLastError(net, NTPSockErr(listenSock));
+		return;
+#error "This needs to send the message to the user"
+	}
+	rv = allocNewSock(listenSock->net);
+#error "Add to back of list"
+	if(rv==NULL) {
+		NTPDisconnect(&newSock);
+		return;
+#error "this needs to send the message to the user"
+	}
+	
+	rv->sock = newSock;
+#error "need to let user know about this"
 }
 
 //---------------------------------------------------------------------
@@ -170,57 +243,29 @@ BOOL COMMrunNetwork(COMMnet *net) {
 
 
 COMMSock *COMMnetConnect(COMMnet *net, const char *dest, uint16_t port) {
-	//alloc space for the sock
-	COMMSock *rv = (COMMSock*)malloc(sizeof(COMMSock));
-	if(rv==NULL) goto ERR_NO_MEM;
-	rv->sendQueue = allocCOMM_List(1000);
-	rv->recvQueue = allocCOMM_List(1000);
-	if(rv->sendQueue==NULL || rv->recvQueue==NULL) goto ERR_QUEUES;
-
-	//add it to our socket list
-	if(!COMM_ListPushBack(net->sockList,rv)) goto ERR_FULL;
+	COMMSock *rv = allocNewSock(net);
 
 	//connect the socket, and if not error, return it.
 	//The user will have to wait for the connect to succeed or fail.
-	rv->net = net;
-	rv->isListening = FALSE;
 	rv->sock = NTPConnectTCP(dest, port);
-	if(rv->sock==NULL) goto ERR_CONNECT;
-
+	if(rv->sock==NULL) {
+		setLastError(net, NTPSockErr(rv->sock));
+		COMMnetCloseSock(&rv);
+		return NULL;
+	}
 
 	return rv; //SUCCESS
-
-#error "Deal with error messages somehow"
-
-	//error handling
-ERR_CONNECT:
-	COMM_ListRemoveAtIndex(net->sockList, NULL, COMM_ListSize(net->sockList)-1);
-ERR_FULL:
-ERR_QUEUES:
-	freeCOMM_List(&rv->sendQueue);
-	freeCOMM_List(&rv->recvQueue);
-	NTPFree(rv);
-
-ERR_NO_MEM:
-	return NULL;
 }
 
 
-BOOL COMMnetListen(COMMnet *net, uint16_t port, COMMnetAccept_cb *cb,
+COMMSock *COMMnetListen(COMMnet *net, uint16_t port, COMMnetAccept_cb *cb,
                         void *context) {
 
 	//alloc memory for the new socket 
-	COMMSock *rv = (COMMSock*)NTPMalloc(sizeof(COMMSock));
+	COMMSock *rv = allocNewSock(net);
 	if(rv==NULL) goto ERR_NO_MEM;
-	rv->sendQueue = allocCOMM_List(0); //can be zero since we aren't sending
-	rv->recvQueue = allocCOMM_List(0); //can be zero since we aren't receiving
-	if(rv->sendQueue==NULL || rv->recvQueue==NULL) goto ERR_QUEUES;
-
-	//add it to our socket list
-	if(!COMM_ListPushBack(net->sockList,rv)) goto ERR_FULL;
 
 	//Start a new socket listening on the port
-	rv->net = net;
 	rv->isListening = TRUE;
 	rv->sock = NTPListen(port);
 	if(rv->sock==NULL) goto ERR_LISTEN;
@@ -231,11 +276,6 @@ BOOL COMMnetListen(COMMnet *net, uint16_t port, COMMnetAccept_cb *cb,
 	//error handling
 ERR_LISTEN:
 	COMM_ListRemoveAtIndex(net->sockList, NULL, COMM_ListSize(net->sockList)-1);
-ERR_FULL:
-ERR_QUEUES:
-	freeCOMM_List(&rv->sendQueue);
-	freeCOMM_List(&rv->recvQueue);
-	NTPFree(rv);
 
 ERR_NO_MEM:
 	return NULL;
