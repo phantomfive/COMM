@@ -12,9 +12,15 @@ typedef struct COMMnet_struct COMMnet;
 //---------------------------------------------------------------------
 // Callback methods. Need to be declared before the API
 //---------------------------------------------------------------------
-void (*COMMnetListen_cb)(COMMnet *net, COMMSock *acceptedSock, void *context);
-void (*COMMnetSent_cb)(COMMnet *net, int bytesSent, void *context);
-void (*COMMnetRecvd_cb)(COMMnet *net,int bytesRecvd,uint8_t*data,void*context);
+/**Called when a socket listening on a port accepts a socket.
+ * If there is some kind of error, then acceptedSock will be NULL.
+ * Usually this is an out-of-memory or interrupt error.*/ 
+void (*COMMnetListen_cb)(COMMnet*net,const COMMSock*acceptedSock,
+                         uint16_t port, void*context);
+void (*COMMnetSent_cb)(COMMnet *net, const COMMSock *sock, int bytesSent, 
+                       uint8_t*data,void *context);
+void (*COMMnetRecvd_cb)(COMMnet *net,const COMMSock *sock, int bytesRecvd,
+                       uint8_t*data,void*context);
 
 
 

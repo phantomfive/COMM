@@ -41,6 +41,7 @@ typedef struct COMMsock_struct {
 
 	//for listening sockets
 	BOOL isListening;
+	uint16_t port;
 	COMMnetAccept_cb *accept_cb;
 	void *acceptContext;
 
@@ -85,6 +86,7 @@ static COMMSock *allocNewSock(COMMnet *net) {
 
 	//set some reasonable defaults
 	rv->net = net;
+	rv->port = 0;
 	rv->isListening = FALSE;
 	rv->currentAmountWritten = 0;
 	rv->currentAmountRead    = 0;
@@ -92,54 +94,81 @@ static COMMSock *allocNewSock(COMMnet *net) {
 }
 
 
-static void handleSockError(COMMSock *sock, int index) {
-
-}
-
 static void doSend(COMMSock *sock, int index) {
 	//call NTP send
+	DataChunk *buf = (DataCHunk*)COMM_ListObjectAtIndex(sock->sendQueue, 0);
+	char *bufferStart = (char*)buf->data + sock->currentAmountWritten;
+	int lenToWrite = buf->len - sock->currentAmountWritten;
+	int bytesWritten = NTPSend(sock->sock, bufferStart, lenToWrite);
 
 	//handle sock error
+	if(bytesWritten<=0) {
+		setLastError(net, NTPSockErr(sock->sock));
+		buf->sendCb(sock->net, sock, bytesWritten, buf->data, buf->context);
+		COMMnetCloseSock(&sock);
+		return;
+	}
 
 	//adjust send pointer
+	sock->currentAmountWritten += bytesWritten;
 
-	//if entire section received,
+	//if not entire section written, return and try again next time
+	if(sock->currentAmountWritten < buf->len) return;
+
 	//notify user and pop send stack
+	buf->sendCb(sock->net, sock, sock->currentAmountWritten, buf->data, buf->context);
+	sock->currentAmountWritten = 0;
+	COMM_ListRemoveAtIndex(sock->buf, NULL, 0);
+	NTPFree(buf);
 }
 
 static void doRecv(COMMSock *sock, int index) {
 	//call NTP recv
+	DataChunk* buf = (DataChunk*)COMM_ListObjectAtIndex(sock->recvQueue,0);
+	char * bufferStart = (char*)buf->data + sock->currentAmountRead;
+	int lenToRead = buf->len - sock->currentAmountRead;
+	int bytesRead = NTPRecv(sock->sock, bufferStart, lenToRead);
 
 	//handle sock error
+	if(bytesRead<=0) {
+		setLastError(net, NTPSockErr(sock->sock));
+		buf->recvCb(sock->net, sock, -1, buf->data, buf->context);
+		COMMnetCloseSock(&sock);
+		return;
+	}
 
 	//adjust recv pointer
+	sock->currentAmountRead += bytesRead;
 
-	//if ! entire section received, return
+	//if not entire section received, return and try again next time
+	if(sock->currentAmountRead < buf->len) return;
 
 	//pass result on to user, pop from stack
-
+	buf->recvCb(sock->net, sock, sock->currentAmountRead, buf->data, buf->context);
+	sock->currentAmountRead = 0;
+	COMM_ListRemoveAtIndex(sock->buf, NULL, 0);
+	NTPFree(buf);
 }
 
 static void doAccept(COMMSock *listenSock, int index) {
 	COMMSock *rv; //it's called rv even though it's not
 	              //returned, it's passed on to the end user
-	NTPSock *newSock = NTPAccept(listenSock);
+	NTPSock *newSock = NTPAccept(listenSock->sock);
 	if(newSock==NULL) {
 		//This is probably a temporary error
-		setLastError(net, NTPSockErr(listenSock));
+		setLastError(net, NTPSockErr(listenSock->sock));
+		listenSock->accept_cb(listenSock->net, NULL, listenSock->port, listenSock->context);
 		return;
-#error "This needs to send the message to the user"
 	}
 	rv = allocNewSock(listenSock->net);
-#error "Add to back of list"
 	if(rv==NULL) {
 		NTPDisconnect(&newSock);
+		listenSock->accept_cb(listenSock->net, NULL, listenSock->port, listenSock->context);
 		return;
-#error "this needs to send the message to the user"
 	}
 	
 	rv->sock = newSock;
-#error "need to let user know about this"
+	listenSock->accept_cb(listenSock->net, newSock, listenSock->port, listenSock->context);
 }
 
 //---------------------------------------------------------------------
@@ -198,7 +227,7 @@ BOOL COMMrunNetwork(COMMnet *net) {
 
 		status = NTPSockStatus(sock->sock);
 		if(status==NTPSOCK_CONNECTING) continue;
-		if(status==NTPSOCK_ERROR) {handleSockError(sock, i); continue;}
+		if(status==NTPSOCK_ERROR) {handleSockErr(sock, i); continue;}
 
 		//add to write set or read set
 		if(sock->isListening || COMM_ListSize(sock->recvQueue)>0) {
@@ -263,22 +292,21 @@ COMMSock *COMMnetListen(COMMnet *net, uint16_t port, COMMnetAccept_cb *cb,
 
 	//alloc memory for the new socket 
 	COMMSock *rv = allocNewSock(net);
-	if(rv==NULL) goto ERR_NO_MEM;
+	if(rv==NULL) {
+		setLastError(net, "Error no memory, COMMnetListen");
+		return NULL;
+	}
 
 	//Start a new socket listening on the port
 	rv->isListening = TRUE;
+	rv->port = port;
 	rv->sock = NTPListen(port);
-	if(rv->sock==NULL) goto ERR_LISTEN;
+	if(rv->sock==NULL){
+		COMM_ListRemoveAtIndex(net->sockList, NULL, COMM_ListSize(net->sockList)-1);
+		return NULL;
+	}
 
 	return rv; //SUCCESS
-
-#error "deal with error messages somehow"
-	//error handling
-ERR_LISTEN:
-	COMM_ListRemoveAtIndex(net->sockList, NULL, COMM_ListSize(net->sockList)-1);
-
-ERR_NO_MEM:
-	return NULL;
 }
 
 
