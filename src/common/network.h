@@ -14,11 +14,20 @@ typedef struct COMMnet_struct COMMnet;
 //---------------------------------------------------------------------
 /**Called when a socket listening on a port accepts a socket.
  * If there is some kind of error, then acceptedSock will be NULL.
- * Usually this is an out-of-memory or interrupt error.*/ 
+ * Usually this is an out-of-memory or interrupt error, or 
+ * if COMMshutdownNetwork() is called.*/
 void (*COMMnetListen_cb)(COMMnet*net,const COMMSock*acceptedSock,
                          uint16_t port, void*context);
+
+/**Called when a message is sent successfully.
+ * If there is a send error, this will get called and bytesSent will be
+ * a negative number.*/
 void (*COMMnetSent_cb)(COMMnet *net, const COMMSock *sock, int bytesSent, 
                        uint8_t*data,void *context);
+
+/**Called when a message is received successfully.
+ * If there is a receive error, this will get called and bytesRecvd will
+ * be a negative number. */
 void (*COMMnetRecvd_cb)(COMMnet *net,const COMMSock *sock, int bytesRecvd,
                        uint8_t*data,void*context);
 

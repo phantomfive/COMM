@@ -21,7 +21,9 @@ typedef struct COMMnet_struct {
 typedef struct dataChunk {
 	void *data;
 	int  len;
-	int timeoutSeconds;
+	time_t timeoutMillis; //Indicates the time when the chunk will expire.
+	                      //That is, when NTPcurrentTimeMillis() returns a
+	                      //number greater than this, then it's timed out
 
 	void *context;
 	COMMnetSent_cb  *sendCb;
@@ -55,42 +57,6 @@ static BOOL setLastError(COMMnet *net, const char *msg) {
 	net->lastError  = msg;
 	net->inErrState = TRUE;
 	return FALSE;
-}
-
-//allocate a sock and set some initial defaults
-//returns NULL if there's no memory
-static COMMSock *allocNewSock(COMMnet *net) {
-	//alloc space for the sock
-	COMMSock *rv = (COMMSock*)NTPmalloc(sizeof(COMMSock));
-	if(rv==NULL) {
-		setLastError(net, "No memory");
-		return NULL;
-	}
-
-	//allocate space for the queues
-	rv->sendQueue = allocCOMM_List(1000);
-	rv->recvQueue = allocCOMM_List(1000);
-	if(rv->sendQueue==NULL || rv->recvQueue==NULL) {
-		freeCOMM_List(&rv->sendQueue);
-		freeCOMM_List(&rv->recvQueue);
-		setLastError(net, "Out of memory");
-		return NULL;
-	}
-
-	//add it to our socket list
-	if(!COMM_ListPushBack(net->sockList,rv)) {
-		setLastError(net, "Socket list is full, too many sockets open");
-		COMMnetCloseSock(&rv);
-		return NULL;
-	}
-
-	//set some reasonable defaults
-	rv->net = net;
-	rv->port = 0;
-	rv->isListening = FALSE;
-	rv->currentAmountWritten = 0;
-	rv->currentAmountRead    = 0;
-	return rv;
 }
 
 
@@ -172,6 +138,93 @@ static void doAccept(COMMSock *listenSock, int index) {
 }
 
 //---------------------------------------------------------------------
+// Private methods for allocating and shutting down sockets
+//---------------------------------------------------------------------
+//forward declarations
+static void sendShutdownSockMessage(COMMSock *sock);
+static void clearSendQueue(COMMSock *sock);
+static void clearRecvQueue(COMMSock *sock);
+
+//allocate a sock and set some initial defaults
+//returns NULL if there's no memory
+static COMMSock *allocNewSock(COMMnet *net) {
+	//alloc space for the sock
+	COMMSock *rv = (COMMSock*)NTPmalloc(sizeof(COMMSock));
+	if(rv==NULL) {
+		setLastError(net, "No memory");
+		return NULL;
+	}
+
+	//allocate space for the queues
+	rv->sendQueue = allocCOMM_List(1000);
+	rv->recvQueue = allocCOMM_List(1000);
+	if(rv->sendQueue==NULL || rv->recvQueue==NULL) {
+		freeCOMM_List(&rv->sendQueue);
+		freeCOMM_List(&rv->recvQueue);
+		setLastError(net, "Out of memory");
+		return NULL;
+	}
+
+	//add it to our socket list
+	if(!COMM_ListPushBack(net->sockList,rv)) {
+		setLastError(net, "Socket list is full, too many sockets open");
+		COMMnetCloseSock(&rv);
+		return NULL;
+	}
+
+	//set some reasonable defaults
+	rv->net = net;
+	rv->port = 0;
+	rv->isListening = FALSE;
+	rv->currentAmountWritten = 0;
+	rv->currentAmountRead    = 0;
+	return rv;
+}
+
+//Does not remove it from the sock list, that will have
+//to be done elsewhere. Sets *sock to NULL
+static void freeSock(COMMSock **sock) {
+	clearSendQueue(*sock);
+	clearRecvQueue(*sock);
+
+	if((*sock)->isListening)
+		sendShutdownSockMessage(*sock);
+
+	freeCOMM_List(&(*sock)->sendQueue);
+	freeCOMM_List(&(*sock)->recvQueue);
+	NTPfree(*sock);
+	*sock=NULL;
+}
+
+static void sendShutdownSockMessage(COMMSock *sock) {
+	sock->listen_cb(sock->net, NULL, sock->port, sock->acceptContext);
+}
+
+static void clearSendQueue(COMMSock *sock) {
+	DataChunk *chunk;
+	while(COMM_ListRemoveAtIndex(sock->sendQueue, &chunk, 0)) {
+		chunk->sendCb(sock->net, sock, -1, chunk->data, chunk->context);
+		NTPFree(chunk);
+	}
+}
+
+static void clearRecvQueue(COMMSock *sock) {
+	DataChunk *chunk;
+	while(COMM_ListRemoveAtIndex(sock->recvQueue, &chunk, 0)) {
+		chunk->recvCb(sock->net, sock, -1, chunk->data, chunk->context);
+		NTPFree(chunk);
+	}
+}
+
+static void checkTimeouts(COMMSock *sock) {
+	
+	//for each item in the recv and send list,
+	//check to see if it has timed out. If it has,
+	//send a timeout message
+}
+
+
+//---------------------------------------------------------------------
 // public API
 //---------------------------------------------------------------------
 
@@ -190,9 +243,17 @@ COMMnet *COMMinitNetwork() {
 
 
 void COMMshutdownNetwork(COMMnet **net) {
+	int i, size;
 	if(net==NULL || *net==NULL) return;
 
-#error "Don't forget to remove the items in the list"
+	//Remove the items from the sock list
+	size = COMM_ListSize((*net)->sockList);
+	for(i=size-1;i>=0;i--) {
+		COMMSock *sock;
+		if(COMM_ListRemoveAtIndex((*net)->sockList, &sock, i)==FALSE) continue;
+		COMMnetCloseSock(&sock);
+	}
+
 	freeCOMM_List(&(*net)->sockList);
 
 	NTPfree(*net);
@@ -209,6 +270,8 @@ BOOL COMMrunNetwork(COMMnet *net) {
 	int i;
 	COMMSock *sock;
 	int size;
+	time_t timeout;
+	static tt = 0;
 
 	NTP_FD_SET readSet;
 	NTP_FD_SET writeSet;
@@ -216,6 +279,7 @@ BOOL COMMrunNetwork(COMMnet *net) {
 	NTP_ZERO_SET(&writeSet);
 
 	if(net->inErrState) return FALSE;
+
 
 	//add all sockets into set for doing a select
 	//to see which ones need attention.
@@ -228,13 +292,14 @@ BOOL COMMrunNetwork(COMMnet *net) {
 		status = NTPSockStatus(sock->sock);
 		if(status==NTPSOCK_CONNECTING) continue;
 		if(status==NTPSOCK_ERROR) {handleSockErr(sock, i); continue;}
+		checkTimeouts(sock);
 
 		//add to write set or read set
 		if(sock->isListening || COMM_ListSize(sock->recvQueue)>0) {
 			NTP_FD_ADD(sock->sock, &readSet);
 		}
 		if(COMM_ListSize(sock->sendQueue)>0) {
-			NTP_FD_Add(sock-sock, &writeSet);
+			NTP_FD_ADD(sock-sock, &writeSet);
 		}
 	}
 	
@@ -245,7 +310,7 @@ BOOL COMMrunNetwork(COMMnet *net) {
 		return setLastError(net, NTPSockErr(NULL));
 	}
 	else if(result==0) {
-		//timed out, no problem
+		//timed out, no problem here
 		return TRUE;
 	}
 
@@ -323,7 +388,7 @@ void COMMnetSendData(COMMSock *sock, const uint8_t*data, uint32_t len,
 	//fill in the fields of the message
 	msg->data = data;
 	msg->len  = len;
-	msg->timeoutSeconds = timeoutSeconds;
+	msg->timeoutMillis = timeoutSeconds*1000 + NTPcurrentTimeMillis();
 	msg->context        = context;
 	msg->sendCb         = cb;
 	msg->recvCb         = NULL;
@@ -347,7 +412,7 @@ void COMMnetRecvData(COMMSock *sock, const uint8_t *data, uint32_t len,
 	//fill in the fields of the message
 	msg->data           = data;
 	msg->len            = len;
-	msg->timeoutSeconds = timeoutSeconds;
+	msg->timeoutMillis  = timeoutSeconds*1000 + NTPcurrentTimeMillis();
 	msg->context        = context;
 	msg->sendCb         = NULL;
 	msg->recvCb         = cb;
