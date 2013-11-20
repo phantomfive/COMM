@@ -217,10 +217,31 @@ static void clearRecvQueue(COMMSock *sock) {
 }
 
 static void checkTimeouts(COMMSock *sock) {
-	
+	int i; DataChunk *chunk; time_t currentTime;
+	currentTime = NTPcurrentTimeMillis();
+
 	//for each item in the recv and send list,
 	//check to see if it has timed out. If it has,
 	//send a timeout message
+	for(i=COMM_ListSize(sock->sendQueue)-1;i>=0; i--) {
+		COMM_ListObjectAtIndex(sock->sendQueue, &chunk, i);
+		if(currentTime > chunk->timeoutMillis) {
+			COMM_ListRemoveAtIndex(sock->sendQueue, NULL, i);
+			#error "Send a timeout message"
+			NTPFree(chunk);
+		}
+	}
+
+	//That was for the send queue, now do the same for
+	//the recv queue
+	for(i=COMM_ListSize(sock->recvQueue)-1;i>=0; i--) {
+		COMM_ListObjectAtIndex(sock->recvQueue, &chunk, i);
+		if(currentTime > chunk->timeoutMillis) {
+			COMM_ListRemoveAtIndex(sock->sendQueue, NULL, i);
+			#error "Send a timeout message"
+			NTPFree(chunk);
+		}
+	}
 }
 
 
