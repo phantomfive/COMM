@@ -6,6 +6,7 @@
  * Copyright Andrew 2013 Usable under the terms of the GPL 3.0 or greater
  ***************************************************************************/
 #include <notrap.h>
+#include "commSock.h"
 
 typedef struct COMMnet_struct COMMnet;
 
@@ -59,10 +60,10 @@ BOOL COMMnetListen(COMMnet *net, uint16_t port, COMMnetAccept_cb *cb,
 void COMMnetCloseSock(COMMSock **sock);
 
 //Absolutely need these
-void COMMnetSendData(COMMnet *net, const uint8_t*data, uint32_t len,
+void COMMnetSendData(COMMSock *sock, const uint8_t*data, uint32_t len,
                      int timeoutSeconds, COMMnetSent_cb*cb, void *context);
 
-void COMMnetRecvData(COMMnet *net, const uint8_t*data, uint32_t len,
+void COMMnetRecvData(COMMSock *sock, const uint8_t*data, uint32_t len,
                      int timeoutSeconds, COMMnetRecvd_cb*cb, void*context);
 
 
