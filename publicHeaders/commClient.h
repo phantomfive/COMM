@@ -3,8 +3,13 @@
 
 #include "commErrors.h"
 
-typedef struct COMM_struct COMM_client;
+typedef struct COMM_client COMM_client;
 typedef int COMM_CLIENT_STATUS;
+
+#define COMM_CLIENT_STATUS_CONNECTING 1
+#define COMM_CLIENT_STATUS_CONNECTED  2
+
+#define COMM_CLIENT_ERR_NO_MEM -1
 
 //--------------------------------------------------------------------------
 // Callbacks for receiving messages.
@@ -40,7 +45,7 @@ COMM_client *COMM_initClient(COMM_message_received_cb *messageReceivedCallback,
                      COMM_binary_message_received_cb *bMessageReceivedCallback,
                      void *context);
 
-void COMM_connect(const char *serverName, uint16_t serverPort);
+void COMM_connect(COMM_client *obj,const char *serverName, uint16_t serverPort);
 
 void COMM_disconnect(COMM_client **obj);
 
