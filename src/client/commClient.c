@@ -6,6 +6,12 @@ typedef struct COMM_client{
 	COMM_CLIENT_STATUS status;
 	NTPSock *sock;
 	char errMsg[3000];
+
+	DataSender currentOutMsg;
+	DataRecvr  currentInMsg;
+
+	BOOL sending;     //true if we are currently sending a message
+	BOOL receiving;   //true if we are currently receiving a message
 }
 
 //----------------------------------------------------------------------
@@ -65,12 +71,24 @@ static void runConnectLoop(COMM_client *obj) {
 static void runSendLoop(COMM_client *obj) {
 	//If we're not currently sending a message, check the queue
 	//to see if we should start sending a message
+	if(!obj->sending) {
+		
+	}
 
 	//If we're currently sending a message, continue sending it
+	if(obj->sending) {
+		int r = COMMSendData(obj->currentOutMsg);
+		if(r<0)
+			setError(CONN_CLIENT_ERR_SEND, "Network error sending message");
+		if(r>0)
+			obj->sending = FALSE;
+	}
 }
 
 static void runRecvLoop(COMM_client *obj) {
-	//If there's a message to receive, then receive part of it
+	//If we're not receiving a message, check for a new one
+
+	//If we're receiving a message, then receive part of it
 
 	//If a message is completely received, then call the callback
 }
