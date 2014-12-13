@@ -51,6 +51,7 @@ COMM_CLIENT_STATUS COMM_runClientLoop(COMM_client *obj) {
 //----------------------------------------------------------------------
 
 static void runConnectLoop(COMM_client *obj) {
+	//check to see if we're done connecting, or if there's an error
 	if(obj->sock==NULL)
 		setError(COMM_CLIENT_ERR_NO_MEM, "NTPConnect returned NULL");
 
@@ -62,10 +63,15 @@ static void runConnectLoop(COMM_client *obj) {
 }
 
 static void runSendLoop(COMM_client *obj) {
+	//If we're not currently sending a message, check the queue
+	//to see if we should start sending a message
 
+	//If we're currently sending a message, continue sending it
 }
 
 static void runRecvLoop(COMM_client *obj) {
+	//If there's a message to receive, then receive part of it
 
+	//If a message is completely received, then call the callback
 }
 
