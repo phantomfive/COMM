@@ -53,7 +53,7 @@ void testCreateStringMessage(CuTest *tc) {
 	COMMFreeMessage((struct Message**)&msg);
 	CuAssert(tc, "check message null", msg==NULL);
 
-	//ok, I guess that's all
+	//ok, I guess that's all for now
 }
 
 void testCreateBinaryMessage(CuTest *tc) {

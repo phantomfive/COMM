@@ -3,6 +3,7 @@
 
 CuSuite *getMessageSuite();
 CuSuite *getListSuite();
+CuSuite *getClientServerTests();
 
 //returns 1 on failure, 0 on success (like unix command line)
 int runAllTests(void) {
@@ -11,6 +12,7 @@ int runAllTests(void) {
 
 	CuSuiteAddSuite(suite, getMessageSuite());
 	CuSuiteAddSuite(suite, getListSuite());
+	CuSuiteAddSuite(suite, getClientServerTests());
 
 	CuSuiteRun(suite);
 	CuSuiteSummary(suite, output);

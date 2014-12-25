@@ -87,9 +87,25 @@ static void runSendLoop(COMM_client *obj) {
 
 static void runRecvLoop(COMM_client *obj) {
 	//If we're not receiving a message, check for a new one
+	if(!obj->receiving)  {
+
+	}
 
 	//If we're receiving a message, then receive part of it
+	if(obj->receiving) {
+		int r = COMMRecvData(obj->currentInMsg);
+		if(r<0)
+			setError(CONN_CLIENT_ERR_RECV, "Network error receiving msg");
+		if(r>0)
+		{
+			//When the message is completely received, forward it on
+			obj->receiving = FALSE;
+			handleNewReceivedMessage(obj);
+		}
+	}
+}
 
-	//If a message is completely received, then call the callback
+static void handleNewReceivedMessage(COMM_client *obj) {
+	
 }
 
